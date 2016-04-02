@@ -5,6 +5,7 @@ addons:
   apt:
     packages:
       - libnfc
+      - libnfc-dev
 install:
   - go get golang.org/x/tools/cmd/cover
   - go get github.com/mattn/goveralls
