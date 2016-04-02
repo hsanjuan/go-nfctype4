@@ -9,8 +9,9 @@ addons:
 install:
   - go get golang.org/x/tools/cmd/cover
   - go get github.com/mattn/goveralls
-  - go get github.com/fuzxxl/nfc/2.0/nfc
   - go get github.com/hsanjuan/ndef
+before_script:
+  - go get github.com/fuzxxl/nfc/2.0/nfc
 script:
   - go test -v -covermode=count -coverprofile=coverage.out
   - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
