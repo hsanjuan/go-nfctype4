@@ -1,12 +1,14 @@
 language: go
 go:
-- tip
+  - tip
 install:
-- go get golang.org/x/tools/cmd/cover
-- go get github.com/mattn/goveralls
+  - go get golang.org/x/tools/cmd/cover
+  - go get github.com/mattn/goveralls
+  - go get github.com/fuzxxl/nfc/2.0/nfc
+  - go get github.com/hsanjuan/ndef
 script:
-- go test -v -covermode=count -coverprofile=coverage.out
-- $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+  - go test -v -covermode=count -coverprofile=coverage.out
+  - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
 env:
   global:
     secure: DFDeWoaxOxgajztb3x/gfiSdaFml9ovuWaJGoA9LGhOqnWinVTRDpqNxJnWvdZxcTWgX0OM7X60JY7bN2btVRGYMQJGTqPF7J24vbgGFXBPyiOpbe83OaiG84hLnGsD4B8b/f9V1WVuhplHE3IOXk1QtDmdkUdzfpnzQSkNF7gAEMhyYO4jQpv8xkL3atOaSytr9rLug5zaQBBCxHyLdXOlGWLnH5xgMLokNDxdewr1VCOx90p17ZdC8Crj5WkcavW5dONzFzyd1rlzYqIBjBNcK/uFs59cELq4Qjj6gswM+TM1G8SVRtMcbr+BFAdt9OYEN4GaKt1Ap27ogmk1wVax2JnUpZ+4Uwm3Vsch7vvLq2HY7ernvs6Ec8Lcjz9cqdm7nS6WC/RgLTJ6bkXmu859MWFp2g3mkAvIkd5ETtWE4qWgC2YlinGGs6/0KHymX0T97pJlQEYc1dl/LhD9fbWEmRKOeAYbuB1USlHBKd/3GDYmiPDLOKGs6m8XLNR6TjrVgwV5hIrL87eHoWiCEJX1B2Gn1SRZHpxRDlQizWae9cPsa+rJEUnP/g7S8ADe8hnCRUbmSR9WY7TaCW1h9eqlOoIpdQzHgnyKhZkiFvV9x8MHAlRCYdbRhy7dEp+Gv4ZF4JUkq0gQaLtkcQb2SyvoJ3Z7f97BRgcqRauZIWPw=
