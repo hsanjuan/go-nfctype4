@@ -30,10 +30,15 @@ type Tag struct {
 }
 
 // Read performs a full read operation on a NFC Type 4 tag using
-// the configured Driver (CommandDriver) to
-// communicate with the reader device.
+// the configured Driver (CommandDriver) to communicate with
+// the reader device.
 //
 // Read takes care of initializing and closing the driver.
+//
+// The specification is followed very closely, and all the necessary
+// steps are performed: NDEF application select, Capability
+// Container select, Capability Container read, NDEF File Select, NDEF File
+// length detection and NDEF File read.
 //
 // It returns the NDEFMessage stored in the tag, or an error
 // if something went wrong.
