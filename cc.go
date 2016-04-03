@@ -23,20 +23,34 @@ import (
 	"fmt"
 )
 
+// CapabilityContainer represents a Capability Container File as defined in the
+// section 5.1 of the specification. The main function of the capability
+// container file is to store the NDEFFileControlTLV (see docs for that struct)
+// along with some maximum data length boundaries for reading and writing
+// (MLe and MLc).
+//
+// The CapabilityContainer also indicates which version of the specification
+// is the Tag compatible with.
 type CapabilityContainer struct {
-	CCLEN          [2]byte // Size of this capability container - 000Fh to FFFEh
-	MappingVersion byte    // Major-Minor version (4 bits each)
-	MLe            [2]byte // Maximum data size that can be read using
-	// ReadBinary. 000Fh-FFFFh
-	MLc [2]byte // Maximum data size that can be sent using UpdateBinary.
-	// 0001h-FFFFh
-	NDEFFileControlTLV *NDEFFileControlTLV // Information to control and manage the NDEF file
+	CCLEN              [2]byte             // Size of this capability container - 000Fh to FFFEh
+	MappingVersion     byte                // Major-Minor version (4 bits each)
+	MLe                [2]byte             // Maximum data read with ReadBinary. 000Fh-FFFFh
+	MLc                [2]byte             // Maximum data to write with UpdateBinary. 0001h-FFFFh
+	NDEFFileControlTLV *NDEFFileControlTLV // NDEF file information
 	TLVBlocks          []*TLV              // Optional TLVs
 }
 
+// ParseBytes parses a byte slice and sets the CapabilityContainer fields
+// correctly. This involves parsing the NDEFFileControl TLV and any
+// optional TLV fields if present.
+//
+// It returns the number of bytes read and an error if something looks wrong
+// (it uses Test() to check for the integrity of the result).
 func (cc *CapabilityContainer) ParseBytes(bytes []byte) (int, error) {
 	if len(bytes) < 15 {
-		return 0, errors.New("Not enough bytes to parse a Capability Container")
+		return 0, errors.New(
+			"CapabilityContainer.ParseBytes: " +
+				"not enough bytes to parse")
 	}
 	i := 0
 	cc.CCLEN[0] = bytes[0]
@@ -48,26 +62,27 @@ func (cc *CapabilityContainer) ParseBytes(bytes []byte) (int, error) {
 	cc.MLc[1] = bytes[6]
 	i += 7
 
-	fc_tlv := new(NDEFFileControlTLV)
-	parsed, err := fc_tlv.ParseBytes(bytes[i : i+8])
+	fcTLV := new(NDEFFileControlTLV)
+	parsed, err := fcTLV.ParseBytes(bytes[i : i+8])
 	if err != nil {
 		return 0, err
 	}
-	cc.NDEFFileControlTLV = fc_tlv
+	cc.NDEFFileControlTLV = fcTLV
 	i += parsed
 
 	cclen := BytesToUint16(cc.CCLEN)
 	for i < int(cclen) {
-		extra_tlv := new(TLV)
-		parsed, err = extra_tlv.ParseBytes(bytes[i:len(bytes)])
+		extraTLV := new(TLV)
+		parsed, err = extraTLV.ParseBytes(bytes[i:len(bytes)])
 		if err != nil {
 			return 0, err
 		}
-		cc.TLVBlocks = append(cc.TLVBlocks, extra_tlv)
+		cc.TLVBlocks = append(cc.TLVBlocks, extraTLV)
 		i += parsed
 	}
 	if i != int(cclen) { // They'd better be equal
-		return 0, fmt.Errorf("Capability Container expected %dBytes but parsed %dB",
+		return 0, fmt.Errorf("CapabilityContainer.ParseBytes: "+
+			"expected %d bytes but parsed %d bytes",
 			cclen, i)
 	}
 
@@ -77,7 +92,9 @@ func (cc *CapabilityContainer) ParseBytes(bytes []byte) (int, error) {
 	return i, nil
 }
 
-// Convert the CapabilityContainer to its byte representation
+// Bytes returns the byte slice representation of a CapabilityContainer.
+// It returns an error if the fields in the struct are breaking the
+// specification in some way, or if there is some other problem.
 func (cc *CapabilityContainer) Bytes() ([]byte, error) {
 	if err := cc.Test(); err != nil {
 		return nil, err
@@ -88,36 +105,41 @@ func (cc *CapabilityContainer) Bytes() ([]byte, error) {
 	buffer.WriteByte(cc.MappingVersion)
 	buffer.Write(cc.MLe[:])
 	buffer.Write(cc.MLc[:])
-	ndef_tlv_bytes, err := cc.NDEFFileControlTLV.Bytes()
+	fcTLVBytes, err := cc.NDEFFileControlTLV.Bytes()
 	if err != nil {
 		return nil, err
 	}
-	buffer.Write(ndef_tlv_bytes)
+	buffer.Write(fcTLVBytes)
 	for _, tlv := range cc.TLVBlocks {
-		tlv_bytes, err := tlv.Bytes()
+		tlvBytes, err := tlv.Bytes()
 		if err != nil {
 			return nil, err
 		}
-		buffer.Write(tlv_bytes)
+		buffer.Write(tlvBytes)
 	}
 	return buffer.Bytes(), nil
 }
 
-// Tests that a CC follows the standard
+// BUG(hector): Currently we don't check that the CapabilityContainer
+// mapping version matches the specification version implemented by this
+// library.
+
+// Test checks that a CapabilityContainer follows the specification and
+// returns an error if a problem is found.
 func (cc *CapabilityContainer) Test() error {
 	cclen := BytesToUint16(cc.CCLEN)
 	if (0x0000 <= cclen && cclen <= 0x000e) || cclen == 0xffff {
-		return errors.New("Capability Container CCLEN is RFU")
+		return errors.New("CapabilityContainer.Test: CCLEN is RFU")
 	}
 
 	mle := BytesToUint16(cc.MLe)
 	if 0x0000 <= mle && mle <= 0x000e {
-		return errors.New("Capability Container MLe is RFU")
+		return errors.New("CapabilityContainer.Test: MLe is RFU")
 	}
 
 	mlc := BytesToUint16(cc.MLc)
 	if 0x0000 == mlc {
-		return errors.New("Capability Container MLc is RFU")
+		return errors.New("CapabilityContainer.Test: MLc is RFU")
 	}
 
 	// Test that TLVs look ok

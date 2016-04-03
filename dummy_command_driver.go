@@ -18,7 +18,7 @@
 package nfctype4
 
 import (
-	"errors"
+	"fmt"
 )
 
 /*
@@ -26,29 +26,41 @@ import (
  *
  */
 
+// DummyCommandDriver implements a CommandDriver which does nothing
+// and returns pre-programmed responses when it calls TransceiveBytes.
 type DummyCommandDriver struct {
-	ReceiveBytes    [][]byte // On every Transceive it will return one of these
+	ReceiveBytes    [][]byte // Responses for every TransceiveBytes call
 	ReceiveBytesPos int
 }
 
+// Initialize does nothing because it is a DummyDriver.
 func (driver *DummyCommandDriver) Initialize() error {
 	return nil
 }
 
+// String returns information about this driver.
 func (driver *DummyCommandDriver) String() string {
 	str := "Dummy driver :)"
 	return str
 }
 
-func (driver *DummyCommandDriver) TransceiveBytes(tx []byte, rx_len int) ([]byte, error) {
+// TransceiveBytes ignores the data sent, returns one of the elements
+// in the ReceiveBytes array, and updates the ReceiveBytesPos to return
+// the next one on the next call.
+//
+// It returns an error if we have already returned all the elements in
+// ReceiveBytes at some point.
+func (driver *DummyCommandDriver) TransceiveBytes(tx []byte, rxLen int) ([]byte, error) {
 	if driver.ReceiveBytesPos >= len(driver.ReceiveBytes) {
-		return nil, errors.New("Dummy Driver: no data to return")
+		return nil, fmt.Errorf("DummyCommandDriver.TransceiveBytes: "+
+			"no data to return (index %d)", driver.ReceiveBytesPos)
 	}
 	response := driver.ReceiveBytes[driver.ReceiveBytesPos]
 	driver.ReceiveBytesPos = driver.ReceiveBytesPos + 1
 	return response, nil
 }
 
+// Close does nothing because this is a DummyDriver.
 func (driver *DummyCommandDriver) Close() {
 	return
 }

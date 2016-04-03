@@ -17,18 +17,17 @@
 
 package nfctype4
 
-import ()
-
-// BytesToUint16 takes a 2-byte array and returns the corresponding
-// uint16 value (BigEndian).
-func BytesToUint16(field [2]byte) uint16 {
-	return uint16(field[0])<<8 | uint16(field[1])
-}
-
-// Uint16ToBytes takes an uint16 value and returns the corresponding
-// 2-byte array (BigEndian).
-func Uint16ToBytes(value uint16) [2]byte {
-	byte0 := byte(value >> 8)
-	byte1 := byte(0x00ff & value) //Probably the casting would suffice
-	return [2]byte{byte0, byte1}
+// CommandDriver is the minimal set of methods the drivers used to communicate
+// with an NFC device need to satisfy. A command driver allows to use a typical
+// NFC reader to send an receive data from an NFC device.
+//
+// nfctype4 provides a LibnfcCommandDriver driver, which uses libnfc
+// to use a connected NFC reader and read from the NFC Type 4 Tag device.
+// It also provides a DummyDriver for testing.
+type CommandDriver interface {
+	Initialize() error // Makes the driver ready for TransceiveBytes
+	Close()            // Tells the driver it won't be used anymore
+	String() string    // Provides information about the driver's state
+	// Sends and receive bytes to the NFC device
+	TransceiveBytes(tx []byte, rxLen int) ([]byte, error)
 }
