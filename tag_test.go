@@ -121,26 +121,20 @@ var dummyTestSetsBad = map[string][][]byte{
 	},
 }
 
-func ExampleTag_Read_libnfcCommandDriver() {
-	Driver = new(LibnfcCommandDriver)
-	tag := new(Tag)
-	message, err := tag.Read()
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println(message)
-	}
-}
-
 func ExampleTag_Read_dummyCommandDriver() {
 	dummyDriver := new(DummyCommandDriver)
+	// ReceiveBytes should be set in the dummy so there is
+	// something to answer. In this case, we simulate
+	// a Yubikey.
 	dummyDriver.ReceiveBytes = dummyTestSets["yubikey_ok"]
 	Driver = dummyDriver
-	tag := new(Tag)
+	tag := new(Tag) // Create a tag for reading
 	message, err := tag.Read()
 	if err != nil {
 		fmt.Println(err)
 	} else {
+		// Since Yubikeys provide a type 'U' NDEF
+		// message, we can print the url like this
 		fmt.Printf("%s%s",
 			ndef.URIProtocols[message.Payload[0]],
 			string(message.Payload[1:]))
