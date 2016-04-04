@@ -63,7 +63,7 @@ func (tlv *TLV) ParseBytes(bytes []byte) (int, error) {
 	if tlv.L[0] == 0xFF { // 3 byte format
 		tlv.L[1] = bytes[2]
 		tlv.L[2] = bytes[3]
-		vLen = BytesToUint16([2]byte{tlv.L[1], tlv.L[2]})
+		vLen = bytesToUint16([2]byte{tlv.L[1], tlv.L[2]})
 		if len(bytes) < 4+int(vLen) {
 			return 0, errors.New(
 				"TLV.ParseBytes: not enough bytes to parse")
@@ -116,7 +116,7 @@ func (tlv *TLV) Test() error {
 
 	var vLen uint16
 	if tlv.L[0] == 0xFF {
-		vLen = BytesToUint16([2]byte{tlv.L[1], tlv.L[2]})
+		vLen = bytesToUint16([2]byte{tlv.L[1], tlv.L[2]})
 		if vLen < 0xFF {
 			return errors.New(
 				"TLV.Test: 3-byte Length's last 2 bytes " +
@@ -218,7 +218,7 @@ func (cTLV *ControlTLV) Bytes() ([]byte, error) {
 // ControlTLV have a number of Rerserved values for FileIDs and
 // access conditions which should not be used.
 func (cTLV *ControlTLV) Test() error {
-	fileID := BytesToUint16(cTLV.FileID)
+	fileID := bytesToUint16(cTLV.FileID)
 	switch fileID {
 	case 0x000, 0xe102, 0xe103, 0x3f00, 0x3fff:
 		return errors.New(
@@ -228,7 +228,7 @@ func (cTLV *ControlTLV) Test() error {
 		return errors.New("ControlTLV.Test: File ID is invalid (RFU)")
 	}
 
-	maxLen := BytesToUint16(cTLV.MaximumFileSize)
+	maxLen := bytesToUint16(cTLV.MaximumFileSize)
 	if 0x0000 <= maxLen && maxLen <= 0x0004 {
 		return errors.New(
 			"ControlTLV.Test: Maximum File Size value is RFU")

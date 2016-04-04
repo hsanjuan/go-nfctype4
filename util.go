@@ -21,13 +21,13 @@ import ()
 
 // BytesToUint16 takes a 2-byte array and returns the corresponding
 // uint16 value (BigEndian).
-func BytesToUint16(field [2]byte) uint16 {
+func bytesToUint16(field [2]byte) uint16 {
 	return uint16(field[0])<<8 | uint16(field[1])
 }
 
 // Uint16ToBytes takes an uint16 value and returns the corresponding
 // 2-byte array (BigEndian).
-func Uint16ToBytes(value uint16) [2]byte {
+func uint16ToBytes(value uint16) [2]byte {
 	byte0 := byte(value >> 8)
 	byte1 := byte(0x00ff & value) //Probably the casting would suffice
 	return [2]byte{byte0, byte1}

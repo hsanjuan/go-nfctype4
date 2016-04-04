@@ -28,6 +28,8 @@ import (
 
 // DummyCommandDriver implements a CommandDriver which does nothing
 // and returns pre-programmed responses when it calls TransceiveBytes.
+// It is used for testing, but also can be a simple example of how a
+// CommandDriver is implemented.
 type DummyCommandDriver struct {
 	ReceiveBytes    [][]byte // Responses for every TransceiveBytes call
 	ReceiveBytesPos int

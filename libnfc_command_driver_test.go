@@ -23,13 +23,14 @@ import (
 	"fmt"
 )
 
-func ExampleTag_Read_libnfcCommandDriver() {
+func ExampleDevice_Read_libnfcCommandDriver() {
 	// Before running, make sure that the NFC reader device
 	// is detected by libnfc and that the tag is in contact
 	// with the device as it will be read right away or fail.
-	Driver = new(LibnfcCommandDriver) // Set Driver to LibNFC
-	tag := new(Tag)
-	message, err := tag.Read() // Read the tag
+	driver := new(LibnfcCommandDriver) // Set Driver to LibNFC
+	device := new(Device)
+	device.Setup(driver)
+	message, err := device.Read() // Read the tag
 	if err != nil {
 		fmt.Println(err)
 	} else { // See what the NDEF message has

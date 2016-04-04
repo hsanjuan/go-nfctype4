@@ -15,9 +15,17 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
+// BUG(hector): Update (write/erase) operations are not yet supported
+
 // Package nfctype4 implements the NFC Forum Type 4 Tag Operation
 // Specification, which allows to read the information contained
 // in this popular type of NFC Tags.
+//
+// Use the Device type to perform Read() and Update() operations on the Tag.
+//
+// Devices must be Setup() first with a CommandDriver. nfctype4 offers
+// a libnfc command driver, which allows to work with any libnfc-detected
+// device, but custom command drivers are supported too.
 package nfctype4
 
 // This is the NFC Type 4 Tag standard version that we are following.
@@ -25,7 +33,3 @@ const (
 	NFCForumMajorVersion = 2
 	NFCForumMinorVersion = 0
 )
-
-// Driver is the CommandDriver in charge of communicating with the NFC device.
-// By default, we include DummyCommandDriver and LibnfcCommandDriver.
-var Driver CommandDriver

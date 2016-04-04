@@ -52,7 +52,7 @@ func (apdu *CAPDU) GetLc() (uint16, error) {
 	case 1:
 		return uint16(apdu.Lc[0]), nil
 	case 3:
-		return BytesToUint16([2]byte{apdu.Lc[1], apdu.Lc[2]}), nil
+		return bytesToUint16([2]byte{apdu.Lc[1], apdu.Lc[2]}), nil
 	default:
 		return 0, errors.New("CAPDU wrong Lc")
 	}
@@ -66,7 +66,7 @@ func (apdu *CAPDU) SetLc(n uint16) {
 	} else if 1 <= n && n <= 255 { // 1-255
 		apdu.Lc = []byte{byte(n)}
 	} else {
-		nBytes := Uint16ToBytes(n)
+		nBytes := uint16ToBytes(n)
 		apdu.Lc = []byte{0x00, nBytes[0], nBytes[1]}
 	}
 }
@@ -96,9 +96,9 @@ func (apdu *CAPDU) GetLe() (uint16, error) {
 			//return uint16(65536) // Overflow! FIXME!
 			return uint16(65535), nil
 		}
-		return BytesToUint16([2]byte{n0, n1}), nil
+		return bytesToUint16([2]byte{n0, n1}), nil
 	case 3:
-		return BytesToUint16([2]byte{apdu.Le[1], apdu.Le[2]}), nil
+		return bytesToUint16([2]byte{apdu.Le[1], apdu.Le[2]}), nil
 	default:
 		return 0, errors.New("CAPDU wrong Le")
 	}
@@ -114,7 +114,7 @@ func (apdu *CAPDU) SetLe(n uint16) {
 	} else if n == 256 {
 		apdu.Le = []byte{byte(0)}
 	} else {
-		nBytes := Uint16ToBytes(n)
+		nBytes := uint16ToBytes(n)
 		if len(apdu.Lc) > 0 { // Make it 2 bytes
 			apdu.Le = []byte{nBytes[0], nBytes[1]}
 		} else { // 3 bytes then
@@ -220,10 +220,10 @@ func (apdu *RAPDU) FileNotFound() bool {
 	return apdu.SW1 == 0x6A && apdu.SW2 == 0x82
 }
 
-// NDEFTagApplicationSelectAPDU returns a new CAPDU
+// NewNDEFTagApplicationSelectAPDU returns a new CAPDU
 // which performs a Select operation by name with the NDEF
 // Application Name.
-func NDEFTagApplicationSelectAPDU() *CAPDU {
+func NewNDEFTagApplicationSelectAPDU() *CAPDU {
 	cApdu := &CAPDU{
 		CLA: byte(0x00),
 		INS: byte(0xA4),
@@ -245,17 +245,17 @@ func NDEFTagApplicationSelectAPDU() *CAPDU {
 	return cApdu
 }
 
-// CapabilityContainerSelectAPDU returns a new Select CAPDU to
+// NewCapabilityContainerSelectAPDU returns a new Select CAPDU to
 // Select the Capabaility Container.
-func CapabilityContainerSelectAPDU() *CAPDU {
-	bytes := Uint16ToBytes(CCID)
-	return SelectAPDU(bytes[:])
+func NewCapabilityContainerSelectAPDU() *CAPDU {
+	bytes := uint16ToBytes(CCID)
+	return NewSelectAPDU(bytes[:])
 }
 
-// ReadBinaryAPDU returns a new CAPDU to perform a binary
+// NewReadBinaryAPDU returns a new CAPDU to perform a binary
 // read with the indicated offset and length.
-func ReadBinaryAPDU(offset uint16, length uint16) *CAPDU {
-	offsetBytes := Uint16ToBytes(offset)
+func NewReadBinaryAPDU(offset uint16, length uint16) *CAPDU {
+	offsetBytes := uint16ToBytes(offset)
 	cApdu := &CAPDU{
 		CLA: byte(0x00),
 		INS: byte(0xB0),
@@ -266,9 +266,9 @@ func ReadBinaryAPDU(offset uint16, length uint16) *CAPDU {
 	return cApdu
 }
 
-// SelectAPDU returns a new CAPDU to perform a select
+// NewSelectAPDU returns a new CAPDU to perform a select
 // operation by ID with the provided fileID
-func SelectAPDU(fileID []byte) *CAPDU {
+func NewSelectAPDU(fileID []byte) *CAPDU {
 	cApdu := &CAPDU{
 		CLA:  byte(0x00),
 		INS:  byte(0xA4),
@@ -284,9 +284,9 @@ func SelectAPDU(fileID []byte) *CAPDU {
 // they include optional TLV fields), will fail, as we only read
 // 15 bytes and the CCLEN will not match the parsed data size.
 
-// CapabilityContainerReadAPDU returns a new CAPDU to
+// NewCapabilityContainerReadAPDU returns a new CAPDU to
 // perform a binary read of 15 bytes with 0 offset (the
 // regular size of a standard capability container).
-func CapabilityContainerReadAPDU() *CAPDU {
-	return ReadBinaryAPDU(0, 15)
+func NewCapabilityContainerReadAPDU() *CAPDU {
+	return NewReadBinaryAPDU(0, 15)
 }

@@ -22,21 +22,29 @@ import (
 	"fmt"
 )
 
+// Commander are capable of performing the NDEF Type 4 Tag Command Set,
+// operations, by using a CommandDriver
+type Commander struct {
+	// Driver is the CommandDriver in charge of communicating with the
+	// NFC device.
+	Driver CommandDriver
+}
+
 // Select perfoms a select operation by file ID
 // It returns an error if something fails, like cases when the
 // response does not indicate success.
-func Select(fileID []byte) error {
-	if Driver == nil {
+func (cmder *Commander) Select(fileID []byte) error {
+	if cmder.Driver == nil {
 		return errors.New("command driver not set")
 	}
-	cApdu := SelectAPDU(fileID)
+	cApdu := NewSelectAPDU(fileID)
 	cApduBytes, err := cApdu.Bytes()
 	if err != nil {
 		return err
 	}
 	le, _ := cApdu.GetLe()
 	maxRXLen := int(le) + 2 // For SW bytes
-	response, err := Driver.TransceiveBytes(cApduBytes, maxRXLen)
+	response, err := cmder.Driver.TransceiveBytes(cApduBytes, maxRXLen)
 	if err != nil {
 		return err
 	}
@@ -60,16 +68,16 @@ func Select(fileID []byte) error {
 // It returns the Payload of the response (which may be shorter
 // than the length provided), or an error if the operation is not
 // successful.
-func ReadBinary(offset uint16, length uint16) ([]byte, error) {
-	if Driver == nil {
+func (cmder *Commander) ReadBinary(offset uint16, length uint16) ([]byte, error) {
+	if cmder.Driver == nil {
 		return nil, errors.New("Command driver not set")
 	}
-	cApdu := ReadBinaryAPDU(offset, length)
+	cApdu := NewReadBinaryAPDU(offset, length)
 	cApduBytes, err := cApdu.Bytes()
 	if err != nil {
 		return nil, err
 	}
-	response, err := Driver.TransceiveBytes(cApduBytes, int(length)+2)
+	response, err := cmder.Driver.TransceiveBytes(cApduBytes, int(length)+2)
 	if err != nil {
 		return nil, err
 	}
@@ -85,21 +93,28 @@ func ReadBinary(offset uint16, length uint16) ([]byte, error) {
 		rApdu.SW2)
 }
 
+// UpdateBinary performs an update operation on the tag, which
+// allows to erase and write to a file.
+// func (cmder *Commander) UpdateBinaryAPDU() {
+// Unimplemented
+// }
+
 // NDEFApplicationSelect performs a Select operation on the NDEF
 // application (which is basically the first step to use a NDEF Application).
 // It returns an error if something goes wrong.
-func NDEFApplicationSelect() error {
-	if Driver == nil {
-		return errors.New("Driver (CommandDriver) not set")
+func (cmder *Commander) NDEFApplicationSelect() error {
+	if cmder.Driver == nil {
+		return errors.New("Commander.NDEFApplicationSelect: " +
+			"Driver not set")
 	}
-	cApdu := NDEFTagApplicationSelectAPDU()
+	cApdu := NewNDEFTagApplicationSelectAPDU()
 	cApduBytes, err := cApdu.Bytes()
 	if err != nil {
 		return err
 	}
 	le, _ := cApdu.GetLe()
 	maxRXLen := int(le) + 2 // For SW bytes
-	response, err := Driver.TransceiveBytes(cApduBytes, maxRXLen)
+	response, err := cmder.Driver.TransceiveBytes(cApduBytes, maxRXLen)
 	if err != nil {
 		return err
 	}
@@ -110,9 +125,11 @@ func NDEFApplicationSelect() error {
 	if rApdu.CommandCompleted() {
 		return nil
 	} else if rApdu.FileNotFound() {
-		return errors.New("NDEF Tag Application not found")
+		return errors.New("Commander.NDEFApplicationSelect: " +
+			"NDEF Tag Application not found")
 	} else {
-		return fmt.Errorf("unknown error. SW1: %02xh. SW2: %02xh",
+		return fmt.Errorf("Commander.NDEFApplicationSelect: "+
+			"unknown error. SW1: %02xh. SW2: %02xh",
 			rApdu.SW1,
 			rApdu.SW2)
 	}
@@ -121,18 +138,14 @@ func NDEFApplicationSelect() error {
 // CapabilityContainerSelect performs a Select operation on the
 // Capability Container File, which is necessary before reading its
 // contents. It returns an error if the operation fails.
-func CapabilityContainerSelect() error {
-	bytes := Uint16ToBytes(CCID)
-	return Select(bytes[:])
+func (cmder *Commander) CapabilityContainerSelect() error {
+	bytes := uint16ToBytes(CCID)
+	return cmder.Select(bytes[:])
 }
 
 // CapabilityContainerRead performs a read binary operation on the
 // capability container. It returns an error if the operation fails.
-func CapabilityContainerRead() ([]byte, error) {
+func (cmder *Commander) CapabilityContainerRead() ([]byte, error) {
 	// offset: 0. Length: 15
-	return ReadBinary(0, 15)
+	return cmder.ReadBinary(0, 15)
 }
-
-// func UpdateBinaryAPDU {
-
-// }

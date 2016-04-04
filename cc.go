@@ -70,7 +70,7 @@ func (cc *CapabilityContainer) ParseBytes(bytes []byte) (int, error) {
 	cc.NDEFFileControlTLV = fcTLV
 	i += parsed
 
-	cclen := BytesToUint16(cc.CCLEN)
+	cclen := bytesToUint16(cc.CCLEN)
 	for i < int(cclen) {
 		extraTLV := new(TLV)
 		parsed, err = extraTLV.ParseBytes(bytes[i:len(bytes)])
@@ -127,17 +127,17 @@ func (cc *CapabilityContainer) Bytes() ([]byte, error) {
 // Test checks that a CapabilityContainer follows the specification and
 // returns an error if a problem is found.
 func (cc *CapabilityContainer) Test() error {
-	cclen := BytesToUint16(cc.CCLEN)
+	cclen := bytesToUint16(cc.CCLEN)
 	if (0x0000 <= cclen && cclen <= 0x000e) || cclen == 0xffff {
 		return errors.New("CapabilityContainer.Test: CCLEN is RFU")
 	}
 
-	mle := BytesToUint16(cc.MLe)
+	mle := bytesToUint16(cc.MLe)
 	if 0x0000 <= mle && mle <= 0x000e {
 		return errors.New("CapabilityContainer.Test: MLe is RFU")
 	}
 
-	mlc := BytesToUint16(cc.MLc)
+	mlc := bytesToUint16(cc.MLc)
 	if 0x0000 == mlc {
 		return errors.New("CapabilityContainer.Test: MLc is RFU")
 	}

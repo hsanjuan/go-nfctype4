@@ -96,7 +96,7 @@ var dummyTestSetsBad = map[string][][]byte{
 		{0x90, 0x00},             // NDEF File Select
 		{0x00, 0x00, 0x90, 0x00}, // NDEF File detect. Size to 0
 	},
-	"tag_invalid_state": {
+	"device_invalid_state": {
 		{0x90, 0x00}, // NDEF app select
 		{0x90, 0x00}, // CC select
 		{0x00, 0x0f, 0x20, 0x00, 0x7f, 0x00, 0x7f, 0x04, 0x06, 0xe1, 0x04, 0x00, 0x7f, 0x00, 0x00, 0x90, 0x00}, // CC binary read
@@ -121,15 +121,16 @@ var dummyTestSetsBad = map[string][][]byte{
 	},
 }
 
-func ExampleTag_Read_dummyCommandDriver() {
-	dummyDriver := new(DummyCommandDriver)
-	// ReceiveBytes should be set in the dummy so there is
-	// something to answer. In this case, we simulate
-	// a Yubikey.
-	dummyDriver.ReceiveBytes = dummyTestSets["yubikey_ok"]
-	Driver = dummyDriver
-	tag := new(Tag) // Create a tag for reading
-	message, err := tag.Read()
+func ExampleDevice_Read_dummyCommandDriver() {
+	dummyDriver := &DummyCommandDriver{
+		// ReceiveBytes should be set in the dummy so there is
+		// something to answer. In this case, we simulate
+		// a Yubikey.
+		ReceiveBytes: dummyTestSets["yubikey_ok"],
+	}
+	device := new(Device)
+	device.Setup(dummyDriver) // This device will use the dummyDriver
+	message, err := device.Read()
 	if err != nil {
 		fmt.Println(err)
 	} else {
@@ -145,12 +146,12 @@ func ExampleTag_Read_dummyCommandDriver() {
 
 func TestRead_goodExamples(t *testing.T) {
 	dummyDriver := new(DummyCommandDriver)
-	Driver = dummyDriver
-	tag := new(Tag)
+	device := new(Device)
+	device.Setup(dummyDriver)
 	for name, byteSet := range dummyTestSets {
 		t.Log("Testing:", name)
 		dummyDriver.ReceiveBytes = byteSet
-		_, err := tag.Read()
+		_, err := device.Read()
 		if err != nil {
 			t.Fail()
 		}
@@ -159,7 +160,7 @@ func TestRead_goodExamples(t *testing.T) {
 
 func TestRead_badExamples(t *testing.T) {
 	expectedMessages := map[string]string{
-		"bad_ndef_select":                      "unknown error. SW1: 00h. SW2: 00h",
+		"bad_ndef_select":                      "Commander.NDEFApplicationSelect: unknown error. SW1: 00h. SW2: 00h",
 		"cc_file_not_found":                    "Select: File e103h not found",
 		"bad_cc_read":                          "CapabilityContainer.ParseBytes: not enough bytes to parse",
 		"bad_cc_size":                          "CapabilityContainer.ParseBytes: not enough bytes to parse",
@@ -168,21 +169,22 @@ func TestRead_badExamples(t *testing.T) {
 		"bad_cc_mle":                           "CapabilityContainer.Test: MLe is RFU",
 		"bad_cc_control_tlv_type":              "NDEFFileControlTLV.ParseBytes: TLV is not a NDEF File Control TLV",
 		"bad_cc_control_tlv_access_conditions": "ControlTLV.Test: Read Access Condition has RFU value",
-		"ndef_file_read_protected":             "Tag.Read: NDEF File is marked as not readable",
+		"ndef_file_read_protected":             "Device.Read: NDEF File is marked as not readable",
 		"ndef_file_not_found":                  "Select: File e104h not found",
 		"ndef_file_select_error":               "Select: Unknown error. SW1: 00h. SW2: 00h",
-		"ndef_file_zero_length":                "Tag.Read: no NDEF Message to read Detected",
-		"tag_invalid_state":                    "Tag.Read: Tag is not in a valid state",
+		"ndef_file_zero_length":                "Device.Read: no NDEF Message to read Detected",
+		"device_invalid_state":                 "Device.Read: Device is not in a valid state",
 		"ndef_file_read_error":                 "ReadBinary: Error. SW1: 00h. SW2: 00h",
 		"ndef_file_bad_record":                 "Message.TestRecords: A single record cannot have the Chunk flag set",
 	}
-	tag := new(Tag)
+	device := new(Device)
 	for name, byteSet := range dummyTestSetsBad {
-		dummyDriver := new(DummyCommandDriver)
-		dummyDriver.ReceiveBytes = byteSet
-		Driver = dummyDriver
+		dummyDriver := &DummyCommandDriver{
+			ReceiveBytes: byteSet,
+		}
+		device.Setup(dummyDriver)
 		t.Log("Testing:", name)
-		_, err := tag.Read()
+		_, err := device.Read()
 		if err != nil {
 			if err.Error() != expectedMessages[name] {
 				t.Error("Failed with unexpected message:", err)
@@ -190,7 +192,7 @@ func TestRead_badExamples(t *testing.T) {
 				t.Log("OK err: ", err)
 			}
 		} else {
-			t.Error("Tag.Read should have errored")
+			t.Error("Device.Read should have errored")
 		}
 	}
 }

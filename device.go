@@ -23,17 +23,28 @@ import (
 	"github.com/hsanjuan/ndef"
 )
 
-// Tag is used to performs operations on a NFC Type 4 Tag, like reading.
-type Tag struct {
+// Device represents an NFC Forum device. This usually means physical
+// equipment such as an USB NFC Reader.
+//
+// Devices can Read and Write NFC Tags using the Commander
+type Device struct {
 	MajorVersion byte // unused
 	MinorVersion byte // unused
+	commander    *Commander
 }
 
-// Read performs a full read operation on a NFC Type 4 tag using
-// the configured Driver (CommandDriver) to communicate with
-// the reader device.
+// Setup makes configures this device to use the provided
+// command driver to perform operations with the Tag
+func (t *Device) Setup(cmdDriver CommandDriver) {
+	t.commander = &Commander{
+		Driver: cmdDriver,
+	}
+}
+
+// Read performs a full read operation on a NFC Type 4 tag.
 //
-// Read takes care of initializing and closing the driver.
+// The CommandDriver provided with Setup is initialized and
+// closed at the end of the operation.
 //
 // The specification is followed very closely, and all the necessary
 // steps are performed: NDEF application select, Capability
@@ -42,35 +53,30 @@ type Tag struct {
 //
 // It returns the NDEFMessage stored in the tag, or an error
 // if something went wrong.
-func (t *Tag) Read() (*ndef.Message, error) {
-	if Driver == nil {
-		errTxt := "The Command Driver has not been configured. " +
-			"You can set it set it with \"nfctype4.Driver = new(" +
-			"YourCommandDriver|" +
-			"DummyCommandDriver|" +
-			"LibnfcCommandDriver" +
-			")\""
-		return nil, errors.New(errTxt)
+func (t *Device) Read() (*ndef.Message, error) {
+	if t.commander == nil {
+		return nil, errors.New("The Device has not been Setup. " +
+			"Please run Device.Setup() first")
 	}
 
 	// Initialize driver and make sure we close it at the end
-	err := Driver.Initialize()
-	defer Driver.Close()
+	err := t.commander.Driver.Initialize()
+	defer t.commander.Driver.Close()
 	if err != nil {
 		return nil, err
 	}
 	// Select NDEF Application
-	if err := NDEFApplicationSelect(); err != nil {
+	if err := t.commander.NDEFApplicationSelect(); err != nil {
 		return nil, err
 	}
 
 	// Select Capability Container
-	if err := CapabilityContainerSelect(); err != nil {
+	if err := t.commander.CapabilityContainerSelect(); err != nil {
 		return nil, err
 	}
 
 	// Read Capability Container and parse it
-	ccBytes, err := CapabilityContainerRead()
+	ccBytes, err := t.commander.CapabilityContainerRead()
 	if err != nil {
 		return nil, err
 	}
@@ -83,28 +89,28 @@ func (t *Tag) Read() (*ndef.Message, error) {
 	fcTlv := cc.NDEFFileControlTLV
 	if !(*ControlTLV)(fcTlv).IsFileReadable() {
 		return nil, errors.New(
-			"Tag.Read: NDEF File is marked as not readable")
+			"Device.Read: NDEF File is marked as not readable")
 	}
 
 	// Select the NDEF File
-	if err := Select(fcTlv.FileID[:]); err != nil {
+	if err := t.commander.Select(fcTlv.FileID[:]); err != nil {
 		return nil, err
 	}
 
 	// Detect NDEF Message procedure 5.4.1
-	maxReadBinaryLen := BytesToUint16(cc.MLe)
-	maxNdefLen := BytesToUint16(fcTlv.MaximumFileSize)
-	nlenBytes, err := ReadBinary(0, 2)
+	maxReadBinaryLen := bytesToUint16(cc.MLe)
+	maxNdefLen := bytesToUint16(fcTlv.MaximumFileSize)
+	nlenBytes, err := t.commander.ReadBinary(0, 2)
 	if err != nil {
 		return nil, err
 	}
-	nlen := BytesToUint16([2]byte{nlenBytes[0], nlenBytes[1]})
+	nlen := bytesToUint16([2]byte{nlenBytes[0], nlenBytes[1]})
 	if nlen == 0 {
 		return nil, errors.New(
-			"Tag.Read: no NDEF Message to read Detected")
+			"Device.Read: no NDEF Message to read Detected")
 	} else if nlen > maxNdefLen-2 {
 		return nil, errors.New(
-			"Tag.Read: Tag is not in a valid state")
+			"Device.Read: Device is not in a valid state")
 	}
 
 	// Message detected
@@ -121,7 +127,7 @@ func (t *Tag) Read() (*ndef.Message, error) {
 			readLen = nlen - totalRead
 		}
 		// Always offset the nlen bytes (2)
-		chunk, err := ReadBinary(2+totalRead, readLen)
+		chunk, err := t.commander.ReadBinary(2+totalRead, readLen)
 		if err != nil {
 			return nil, err
 		}
