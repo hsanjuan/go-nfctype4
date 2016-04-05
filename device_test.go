@@ -162,20 +162,20 @@ func TestRead_badExamples(t *testing.T) {
 	expectedMessages := map[string]string{
 		"bad_ndef_select":                      "Commander.NDEFApplicationSelect: unknown error. SW1: 00h. SW2: 00h",
 		"cc_file_not_found":                    "Select: File e103h not found",
-		"bad_cc_read":                          "CapabilityContainer.ParseBytes: not enough bytes to parse",
+		"bad_cc_read":                          "CapabilityContainer.Unmarshal: not enough bytes to parse",
 		"bad_cc_size":                          "CapabilityContainer.ParseBytes: not enough bytes to parse",
-		"bad_cc_cclen":                         "CapabilityContainer.ParseBytes: expected 14 bytes but parsed 15 bytes",
-		"bad_cc_mlc":                           "CapabilityContainer.Test: MLc is RFU",
-		"bad_cc_mle":                           "CapabilityContainer.Test: MLe is RFU",
-		"bad_cc_control_tlv_type":              "NDEFFileControlTLV.ParseBytes: TLV is not a NDEF File Control TLV",
-		"bad_cc_control_tlv_access_conditions": "ControlTLV.Test: Read Access Condition has RFU value",
+		"bad_cc_cclen":                         "CapabilityContainer.Unmarshal: expected 14 bytes but parsed 15 bytes",
+		"bad_cc_mlc":                           "CapabilityContainer.check: MLc is RFU",
+		"bad_cc_mle":                           "CapabilityContainer.check: MLe is RFU",
+		"bad_cc_control_tlv_type":              "NDEFFileControlTLV.Unmarshal: TLV is not a NDEF File Control TLV",
+		"bad_cc_control_tlv_access_conditions": "ControlTLV.check: Read Access Condition has RFU value",
 		"ndef_file_read_protected":             "Device.Read: NDEF File is marked as not readable",
 		"ndef_file_not_found":                  "Select: File e104h not found",
 		"ndef_file_select_error":               "Select: Unknown error. SW1: 00h. SW2: 00h",
 		"ndef_file_zero_length":                "Device.Read: no NDEF Message to read Detected",
 		"device_invalid_state":                 "Device.Read: Device is not in a valid state",
 		"ndef_file_read_error":                 "ReadBinary: Error. SW1: 00h. SW2: 00h",
-		"ndef_file_bad_record":                 "Message.TestRecords: A single record cannot have the Chunk flag set",
+		"ndef_file_bad_record":                 "Message.checkRecords: A single record cannot have the Chunk flag set",
 	}
 	device := new(Device)
 	for name, byteSet := range dummyTestSetsBad {

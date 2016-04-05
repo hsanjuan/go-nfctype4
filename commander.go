@@ -38,19 +38,18 @@ func (cmder *Commander) Select(fileID []byte) error {
 		return errors.New("command driver not set")
 	}
 	cApdu := NewSelectAPDU(fileID)
-	cApduBytes, err := cApdu.Bytes()
+	cApduBytes, err := cApdu.Marshal()
 	if err != nil {
 		return err
 	}
-	le, _ := cApdu.GetLe()
-	maxRXLen := int(le) + 2 // For SW bytes
-	response, err := cmder.Driver.TransceiveBytes(cApduBytes, maxRXLen)
+	maxRXLen := cApdu.GetLe() + 2 // For SW bytes
+	response, err := cmder.Driver.TransceiveBytes(cApduBytes, int(maxRXLen))
 	if err != nil {
 		return err
 	}
 
 	rApdu := new(RAPDU)
-	rApdu.ParseBytes(response)
+	rApdu.Unmarshal(response)
 
 	if rApdu.CommandCompleted() {
 		return nil
@@ -73,7 +72,7 @@ func (cmder *Commander) ReadBinary(offset uint16, length uint16) ([]byte, error)
 		return nil, errors.New("Command driver not set")
 	}
 	cApdu := NewReadBinaryAPDU(offset, length)
-	cApduBytes, err := cApdu.Bytes()
+	cApduBytes, err := cApdu.Marshal()
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +82,7 @@ func (cmder *Commander) ReadBinary(offset uint16, length uint16) ([]byte, error)
 	}
 
 	rApdu := new(RAPDU)
-	rApdu.ParseBytes(response)
+	rApdu.Unmarshal(response)
 	if rApdu.CommandCompleted() {
 		return rApdu.ResponseBody, nil
 	}
@@ -108,19 +107,18 @@ func (cmder *Commander) NDEFApplicationSelect() error {
 			"Driver not set")
 	}
 	cApdu := NewNDEFTagApplicationSelectAPDU()
-	cApduBytes, err := cApdu.Bytes()
+	cApduBytes, err := cApdu.Marshal()
 	if err != nil {
 		return err
 	}
-	le, _ := cApdu.GetLe()
-	maxRXLen := int(le) + 2 // For SW bytes
-	response, err := cmder.Driver.TransceiveBytes(cApduBytes, maxRXLen)
+	maxRXLen := cApdu.GetLe() + 2 // For SW bytes
+	response, err := cmder.Driver.TransceiveBytes(cApduBytes, int(maxRXLen))
 	if err != nil {
 		return err
 	}
 
 	rApdu := new(RAPDU)
-	rApdu.ParseBytes(response)
+	rApdu.Unmarshal(response)
 
 	if rApdu.CommandCompleted() {
 		return nil

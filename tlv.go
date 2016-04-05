@@ -39,59 +39,68 @@ type TLV struct {
 	V []byte  // Value field
 }
 
-// ParseBytes parses a byte slice and sets the TLV struct fields accordingly.
+// Reset sets the fields of the TLV to their default values.
+func (tlv *TLV) Reset() {
+	tlv.T = 0
+	tlv.L = [3]byte{0, 0, 0}
+	tlv.V = []byte{}
+}
+
+// Unmarshal parses a byte slice and sets the TLV struct fields accordingly.
+// It always resets the TLV before parsing.
 // It returns the number of bytes parsed or an error if the result does
-// not look correct (it uses Test()).
-func (tlv *TLV) ParseBytes(bytes []byte) (int, error) {
-	if len(bytes) == 0 {
+// not look correct.
+func (tlv *TLV) Unmarshal(buf []byte) (int, error) {
+	tlv.Reset()
+	if len(buf) == 0 {
 		return 0, errors.New(
-			"TLV.ParseBytes: need at least 1 byte to parse a TLV")
+			"TLV.Unmarshal: need at least 1 byte to parse a TLV")
 	}
-	tlv.T = bytes[0]
-	if len(bytes) == 1 {
+	tlv.T = buf[0]
+	if len(buf) == 1 {
 		// No length field. pff
 		tlv.L = [3]byte{0, 0, 0}
 		tlv.V = []byte{}
 		return 1, nil
 	}
-	tlv.L[0] = bytes[1]
-	if len(bytes) < 2+int(tlv.L[0]) { // At least
-		return 0, errors.New("TLV.ParseBytes: TLV.L field is malformed")
+	tlv.L[0] = buf[1]
+	if len(buf) < 2+int(tlv.L[0]) { // At least
+		return 0, errors.New("TLV.Unmarshal: TLV.L field is malformed")
 	}
 	vLen := uint16(0)
 	var parsed int
 	if tlv.L[0] == 0xFF { // 3 byte format
-		tlv.L[1] = bytes[2]
-		tlv.L[2] = bytes[3]
+		tlv.L[1] = buf[2]
+		tlv.L[2] = buf[3]
 		vLen = bytesToUint16([2]byte{tlv.L[1], tlv.L[2]})
-		if len(bytes) < 4+int(vLen) {
+		if len(buf) < 4+int(vLen) {
 			return 0, errors.New(
-				"TLV.ParseBytes: not enough bytes to parse")
+				"TLV.Unmarshal: not enough bytes to parse")
 		}
-		tlv.V = bytes[4 : 4+int(vLen)]
+		tlv.V = buf[4 : 4+int(vLen)]
 		parsed = 4 + len(tlv.V)
 	} else {
 		vLen = uint16(tlv.L[0])
-		if len(bytes) < 2+int(vLen) {
+		if len(buf) < 2+int(vLen) {
 			return 0, errors.New(
-				"TLV.ParseBytes: not enough bytes to parse")
+				"TLV.Unmarshal: not enough bytes to parse")
 		}
-		tlv.V = bytes[2 : 2+int(vLen)]
+		tlv.V = buf[2 : 2+int(vLen)]
 		parsed = 2 + len(tlv.V)
 	}
 
 	// Test just in case
-	if err := tlv.Test(); err != nil {
+	if err := tlv.check(); err != nil {
 		return 0, err
 	}
 
 	return parsed, nil
 }
 
-// Bytes returns the byte slice representation of a TLV.
-// It returns an error if the TLV breaks the spec (uses Test()).
-func (tlv *TLV) Bytes() ([]byte, error) {
-	if err := tlv.Test(); err != nil {
+// Marshal returns the byte slice representation of a TLV.
+// It returns an error if the TLV breaks the spec.
+func (tlv *TLV) Marshal() ([]byte, error) {
+	if err := tlv.check(); err != nil {
 		return nil, err
 	}
 	var buffer bytes.Buffer
@@ -105,11 +114,11 @@ func (tlv *TLV) Bytes() ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-// Test performs some tests on a TLV to ensure that it follows the
+// Check performs some tests on a TLV to ensure that it follows the
 // specification. These are mostly related to the L bytes being used
 // correctly.
 // It returns an error when something does not look right.
-func (tlv *TLV) Test() error {
+func (tlv *TLV) check() error {
 	if tlv.T != 0x04 && tlv.T != 0x05 {
 		return errors.New("TLV T[ype] is RFU")
 	}
@@ -119,11 +128,11 @@ func (tlv *TLV) Test() error {
 		vLen = bytesToUint16([2]byte{tlv.L[1], tlv.L[2]})
 		if vLen < 0xFF {
 			return errors.New(
-				"TLV.Test: 3-byte Length's last 2 bytes " +
+				"TLV.check: 3-byte Length's last 2 bytes " +
 					"value should > 0xFF")
 		}
 		if vLen == 0xFFFF {
-			return errors.New("TLV.Test: 3-byte Length's last " +
+			return errors.New("TLV.check: 3-byte Length's last " +
 				"2 bytes value 0xFFFF is RFU")
 		}
 	} else {
@@ -131,7 +140,7 @@ func (tlv *TLV) Test() error {
 	}
 	if int(vLen) != len(tlv.V) {
 		return errors.New(
-			"TLV.Test: L[ength] does not match the V[alue] length")
+			"TLV.check: L[ength] does not match the V[alue] length")
 	}
 	return nil
 }
@@ -159,13 +168,13 @@ type NDEFFileControlTLV ControlTLV
 // propietary format.
 type PropietaryFileControlTLV ControlTLV
 
-// ParseBytes parses a byte slice and sets the ControlTLV fields accordingly.
+// Unmarshal parses a byte slice and sets the ControlTLV fields accordingly.
 // It returns the number of bytes parsed or an error if the result does
-// not look correct (it uses Test()).
-func (cTLV *ControlTLV) ParseBytes(bytes []byte) (int, error) {
+// not look correct.
+func (cTLV *ControlTLV) Unmarshal(buf []byte) (int, error) {
 	// Parse it to a regular TLV
 	tlv := new(TLV)
-	parsed, err := tlv.ParseBytes(bytes)
+	parsed, err := tlv.Unmarshal(buf)
 	if err != nil {
 		return 0, err
 	}
@@ -182,7 +191,7 @@ func (cTLV *ControlTLV) ParseBytes(bytes []byte) (int, error) {
 	cTLV.FileReadAccessCondition = tlv.V[4]
 	cTLV.FileWriteAccessCondition = tlv.V[5]
 
-	if err := cTLV.Test(); err != nil {
+	if err := cTLV.check(); err != nil {
 		return 0, err
 	}
 
@@ -190,16 +199,15 @@ func (cTLV *ControlTLV) ParseBytes(bytes []byte) (int, error) {
 	return 8, nil
 }
 
-// Bytes returns the byte slice representation of a ControlTLV.
-// It returns an error if the ControlTLV does not look correct (it uses
-// Test()).
-func (cTLV *ControlTLV) Bytes() ([]byte, error) {
+// Marshal returns the byte slice representation of a ControlTLV.
+// It returns an error if the ControlTLV does not look correct..
+func (cTLV *ControlTLV) Marshal() ([]byte, error) {
 	// Test that this cTLV looks good
-	if err := cTLV.Test(); err != nil {
+	if err := cTLV.check(); err != nil {
 		return nil, err
 	}
 
-	// Copy this to a regular TLV and leverage Bytes() from there
+	// Copy this to a regular TLV and leverage Marshal() from there
 	tlv := new(TLV)
 	tlv.T = cTLV.T
 	tlv.L[0] = cTLV.L
@@ -209,100 +217,98 @@ func (cTLV *ControlTLV) Bytes() ([]byte, error) {
 	v.WriteByte(cTLV.FileReadAccessCondition)
 	v.WriteByte(cTLV.FileWriteAccessCondition)
 	tlv.V = v.Bytes()
-	return tlv.Bytes()
+	return tlv.Marshal()
 }
 
-// Test makes sure that the ControlTLV is not breaking the specification
+// Check makes sure that the ControlTLV is not breaking the specification
 // by checking its fields' values are acceptable. If not, it returns an error.
 //
 // ControlTLV have a number of Rerserved values for FileIDs and
 // access conditions which should not be used.
-func (cTLV *ControlTLV) Test() error {
+func (cTLV *ControlTLV) check() error {
 	fileID := bytesToUint16(cTLV.FileID)
 	switch fileID {
 	case 0x000, 0xe102, 0xe103, 0x3f00, 0x3fff:
 		return errors.New(
-			"ControlTLV.Test: File ID is reserved by ISO/IEC_7816-4")
+			"ControlTLV.check: File ID is reserved by ISO/IEC_7816-4")
 
 	case 0xffff:
-		return errors.New("ControlTLV.Test: File ID is invalid (RFU)")
+		return errors.New("ControlTLV.check: File ID is invalid (RFU)")
 	}
 
 	maxLen := bytesToUint16(cTLV.MaximumFileSize)
 	if 0x0000 <= maxLen && maxLen <= 0x0004 {
 		return errors.New(
-			"ControlTLV.Test: Maximum File Size value is RFU")
+			"ControlTLV.check: Maximum File Size value is RFU")
 	}
 
 	if 0x01 <= cTLV.FileReadAccessCondition && cTLV.FileReadAccessCondition <= 0x7f {
 		return errors.New(
-			"ControlTLV.Test: Read Access Condition has RFU value")
+			"ControlTLV.check: Read Access Condition has RFU value")
 	}
 
 	if 0x01 <= cTLV.FileWriteAccessCondition && cTLV.FileWriteAccessCondition <= 0x7f {
 		return errors.New(
-			"ControlTLV.Test: Write Access Condition has RFU value")
+			"ControlTLV.check: Write Access Condition has RFU value")
 	}
 	return nil
 }
 
-// ParseBytes parses a byte slice and sets the NDEFFileControlTLV fields
+// Unmarshal parses a byte slice and sets the NDEFFileControlTLV fields
 // accordingly.
 // It returns the number of bytes parsed or an error if the result does
-// not look correct (it uses ControlTLV's Test() and checks the value
-// of the T field is good.
-func (nfcTLV *NDEFFileControlTLV) ParseBytes(bytes []byte) (int, error) {
+// not follow the specification.
+func (nfcTLV *NDEFFileControlTLV) Unmarshal(buf []byte) (int, error) {
 	// Reuse functions
 	tlv := (*ControlTLV)(nfcTLV)
-	parsed, err := tlv.ParseBytes(bytes)
+	parsed, err := tlv.Unmarshal(buf)
 	if err != nil {
 		return parsed, err
 	}
 
 	if !tlv.IsNDEFFileControlTLV() {
-		return parsed, errors.New("NDEFFileControlTLV.ParseBytes: " +
+		return parsed, errors.New("NDEFFileControlTLV.Unmarshal: " +
 			"TLV is not a NDEF File Control TLV")
 	}
 
 	return parsed, nil
 }
 
-// Bytes returns the byte slice representation of a NDEFFileControlTLV.
-// It returns an error if the underlying ControlTLV does not look correct
-// (it uses Test()).
-func (nfcTLV *NDEFFileControlTLV) Bytes() ([]byte, error) {
+// Marshal returns the byte slice representation of a NDEFFileControlTLV.
+// It returns an error if the underlying ControlTLV does not follow the
+// specification.
+func (nfcTLV *NDEFFileControlTLV) Marshal() ([]byte, error) {
 	tlv := (*ControlTLV)(nfcTLV)
-	return tlv.Bytes()
+	return tlv.Marshal()
 }
 
-// ParseBytes parses a byte slice and sets the PropietaryFileControlTLV fields
+// Unmarshal parses a byte slice and sets the PropietaryFileControlTLV fields
 // accordingly.
 // It returns the number of bytes parsed or an error if the result does
-// not look correct (it uses ControlTLV's Test() and checks the value
-// of the T field is good.
-func (pfcTLV *PropietaryFileControlTLV) ParseBytes(bytes []byte) (int, error) {
+// not follow the specification.
+func (pfcTLV *PropietaryFileControlTLV) Unmarshal(buf []byte) (int, error) {
 	// Reuse functions
 	tlv := (*ControlTLV)(pfcTLV)
-	parsed, err := tlv.ParseBytes(bytes)
+	parsed, err := tlv.Unmarshal(buf)
 	if err != nil {
 		return parsed, err
 	}
 
 	if !tlv.IsPropietaryFileControlTLV() {
 		return parsed, errors.New(
-			"PropietaryFileControlTLV.ParseBytes:" +
+			"PropietaryFileControlTLV.Unmarshal:" +
 				"TLV is not a Propietary File Control TLV")
 	}
 
 	return parsed, nil
 }
 
-// Bytes returns the byte slice representation of a PropietaryFileControlTLV.
-// It returns an error if the underlying ControlTLV does not look correct
-// (it uses Test()).
-func (pfcTLV *PropietaryFileControlTLV) Bytes() ([]byte, error) {
+// Marshal returns the byte slice representation of a PropietaryFileControlTLV.
+// It returns an error if the underlying ControlTLV does not follow the
+// specification.
+func (pfcTLV *PropietaryFileControlTLV) Marshal() ([]byte, error) {
 	tlv := (*ControlTLV)(pfcTLV)
-	return tlv.Bytes()
+	return tlv.Marshal()
 }
 
 // IsNDEFFileControlTLV returns true if the T field has the right value.

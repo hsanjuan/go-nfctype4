@@ -40,30 +40,43 @@ type CapabilityContainer struct {
 	TLVBlocks          []*TLV              // Optional TLVs
 }
 
-// ParseBytes parses a byte slice and sets the CapabilityContainer fields
+// Reset clears all the fields of the CapabilityContainer to their
+// default values.
+func (cc *CapabilityContainer) Reset() {
+	cc.CCLEN = [2]byte{0, 0}
+	cc.MappingVersion = 0
+	cc.MLe = [2]byte{0, 0}
+	cc.MLc = [2]byte{0, 0}
+	cc.NDEFFileControlTLV = nil
+	cc.TLVBlocks = nil
+}
+
+// Unmarshal parses a byte slice and sets the CapabilityContainer fields
 // correctly. This involves parsing the NDEFFileControl TLV and any
-// optional TLV fields if present.
+// optional TLV fields if present. It always resets the CapabilityContainer
+// before parsing.
 //
 // It returns the number of bytes read and an error if something looks wrong
-// (it uses Test() to check for the integrity of the result).
-func (cc *CapabilityContainer) ParseBytes(bytes []byte) (int, error) {
-	if len(bytes) < 15 {
+// (it uses check() to check for the integrity of the result).
+func (cc *CapabilityContainer) Unmarshal(buf []byte) (int, error) {
+	cc.Reset()
+	if len(buf) < 15 {
 		return 0, errors.New(
-			"CapabilityContainer.ParseBytes: " +
+			"CapabilityContainer.Unmarshal: " +
 				"not enough bytes to parse")
 	}
 	i := 0
-	cc.CCLEN[0] = bytes[0]
-	cc.CCLEN[1] = bytes[1]
-	cc.MappingVersion = bytes[2]
-	cc.MLe[0] = bytes[3]
-	cc.MLe[1] = bytes[4]
-	cc.MLc[0] = bytes[5]
-	cc.MLc[1] = bytes[6]
+	cc.CCLEN[0] = buf[0]
+	cc.CCLEN[1] = buf[1]
+	cc.MappingVersion = buf[2]
+	cc.MLe[0] = buf[3]
+	cc.MLe[1] = buf[4]
+	cc.MLc[0] = buf[5]
+	cc.MLc[1] = buf[6]
 	i += 7
 
 	fcTLV := new(NDEFFileControlTLV)
-	parsed, err := fcTLV.ParseBytes(bytes[i : i+8])
+	parsed, err := fcTLV.Unmarshal(buf[i : i+8])
 	if err != nil {
 		return 0, err
 	}
@@ -73,7 +86,7 @@ func (cc *CapabilityContainer) ParseBytes(bytes []byte) (int, error) {
 	cclen := bytesToUint16(cc.CCLEN)
 	for i < int(cclen) {
 		extraTLV := new(TLV)
-		parsed, err = extraTLV.ParseBytes(bytes[i:len(bytes)])
+		parsed, err = extraTLV.Unmarshal(buf[i:len(buf)])
 		if err != nil {
 			return 0, err
 		}
@@ -81,22 +94,22 @@ func (cc *CapabilityContainer) ParseBytes(bytes []byte) (int, error) {
 		i += parsed
 	}
 	if i != int(cclen) { // They'd better be equal
-		return 0, fmt.Errorf("CapabilityContainer.ParseBytes: "+
+		return 0, fmt.Errorf("CapabilityContainer.Unmarshal: "+
 			"expected %d bytes but parsed %d bytes",
 			cclen, i)
 	}
 
-	if err = cc.Test(); err != nil {
+	if err = cc.check(); err != nil {
 		return 0, err
 	}
 	return i, nil
 }
 
-// Bytes returns the byte slice representation of a CapabilityContainer.
+// Marshal returns the byte slice representation of a CapabilityContainer.
 // It returns an error if the fields in the struct are breaking the
 // specification in some way, or if there is some other problem.
-func (cc *CapabilityContainer) Bytes() ([]byte, error) {
-	if err := cc.Test(); err != nil {
+func (cc *CapabilityContainer) Marshal() ([]byte, error) {
+	if err := cc.check(); err != nil {
 		return nil, err
 	}
 
@@ -105,13 +118,13 @@ func (cc *CapabilityContainer) Bytes() ([]byte, error) {
 	buffer.WriteByte(cc.MappingVersion)
 	buffer.Write(cc.MLe[:])
 	buffer.Write(cc.MLc[:])
-	fcTLVBytes, err := cc.NDEFFileControlTLV.Bytes()
+	fcTLVBytes, err := cc.NDEFFileControlTLV.Marshal()
 	if err != nil {
 		return nil, err
 	}
 	buffer.Write(fcTLVBytes)
 	for _, tlv := range cc.TLVBlocks {
-		tlvBytes, err := tlv.Bytes()
+		tlvBytes, err := tlv.Marshal()
 		if err != nil {
 			return nil, err
 		}
@@ -124,31 +137,31 @@ func (cc *CapabilityContainer) Bytes() ([]byte, error) {
 // mapping version matches the specification version implemented by this
 // library.
 
-// Test checks that a CapabilityContainer follows the specification and
+// Check tests that a CapabilityContainer follows the specification and
 // returns an error if a problem is found.
-func (cc *CapabilityContainer) Test() error {
+func (cc *CapabilityContainer) check() error {
 	cclen := bytesToUint16(cc.CCLEN)
 	if (0x0000 <= cclen && cclen <= 0x000e) || cclen == 0xffff {
-		return errors.New("CapabilityContainer.Test: CCLEN is RFU")
+		return errors.New("CapabilityContainer.check: CCLEN is RFU")
 	}
 
 	mle := bytesToUint16(cc.MLe)
 	if 0x0000 <= mle && mle <= 0x000e {
-		return errors.New("CapabilityContainer.Test: MLe is RFU")
+		return errors.New("CapabilityContainer.check: MLe is RFU")
 	}
 
 	mlc := bytesToUint16(cc.MLc)
 	if 0x0000 == mlc {
-		return errors.New("CapabilityContainer.Test: MLc is RFU")
+		return errors.New("CapabilityContainer.check: MLc is RFU")
 	}
 
 	// Test that TLVs look ok
-	if err := (*ControlTLV)(cc.NDEFFileControlTLV).Test(); err != nil {
+	if err := (*ControlTLV)(cc.NDEFFileControlTLV).check(); err != nil {
 		return err
 	}
 
 	for _, tlv := range cc.TLVBlocks {
-		if err := tlv.Test(); err != nil {
+		if err := tlv.check(); err != nil {
 			return err
 		}
 	}

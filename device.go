@@ -81,7 +81,7 @@ func (t *Device) Read() (*ndef.Message, error) {
 		return nil, err
 	}
 	cc := new(CapabilityContainer)
-	if _, err := cc.ParseBytes(ccBytes); err != nil {
+	if _, err := cc.Unmarshal(ccBytes); err != nil {
 		return nil, err
 	}
 
@@ -139,7 +139,7 @@ func (t *Device) Read() (*ndef.Message, error) {
 
 	ndefBytes := buffer.Bytes()
 	ndefMessage := new(ndef.Message)
-	if _, err := ndefMessage.ParseBytes(ndefBytes); err != nil {
+	if _, err := ndefMessage.Unmarshal(ndefBytes); err != nil {
 		return nil, err
 	}
 
