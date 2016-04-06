@@ -18,6 +18,7 @@
 package swtag
 
 import (
+	//	"fmt"
 	"errors"
 	"github.com/hsanjuan/nfctype4"
 	"github.com/hsanjuan/nfctype4/apdu"
@@ -76,6 +77,7 @@ func (driver *Driver) TransceiveBytes(tx []byte, rxLen int) ([]byte, error) {
 	if _, err := capdu.Unmarshal(tx); err != nil {
 		return nil, err
 	}
+
 	rapdu := driver.Tag.Command(capdu)
 	rxBuf, err := rapdu.Marshal()
 	if err != nil {

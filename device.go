@@ -145,6 +145,7 @@ func (t *Device) Read() (*ndef.Message, error) {
 	}
 
 	ndefBytes := buffer.Bytes()
+
 	ndefMessage := new(ndef.Message)
 	if _, err := ndefMessage.Unmarshal(ndefBytes); err != nil {
 		return nil, err

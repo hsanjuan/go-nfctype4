@@ -18,6 +18,7 @@
 package static
 
 import (
+	//	"fmt"
 	"bytes"
 	"encoding/binary"
 	"github.com/hsanjuan/ndef"
@@ -90,10 +91,17 @@ func (tag *Tag) doSelect(capdu *apdu.CAPDU) *apdu.RAPDU {
 	switch {
 	case capdu.P1 == 0x04 &&
 		capdu.P2 == 0x00 &&
-		capdu.GetLc() == 0x07 &&
-		binary.BigEndian.Uint64(capdu.Data) == nfctype4.NDEFAPPLICATION:
-		// Selecting NDEF Application. Yes OK!
-		return apdu.NewRAPDU(apdu.RAPDUCommandCompleted)
+		capdu.GetLc() == 0x07:
+		// Convert data to Uint64
+		data8 := make([]byte, 8)
+		copy(data8[1:], capdu.Data)
+		dataVal := binary.BigEndian.Uint64(data8)
+		if dataVal == nfctype4.NDEFAPPLICATION {
+			// Selecting NDEF Application. Yes OK!
+			return apdu.NewRAPDU(apdu.RAPDUCommandCompleted)
+		}
+		return apdu.NewRAPDU(apdu.RAPDUFileNotFound)
+
 	case capdu.P1 == 0x00 && capdu.P2 == 0x0C:
 		if capdu.GetLc() != uint16(2) {
 			// Lc inconsistent with P1-P2
@@ -124,22 +132,23 @@ func (tag *Tag) doRead(capdu *apdu.CAPDU) *apdu.RAPDU {
 	if tag.selectedFileID == 0x00 {
 		return apdu.NewRAPDU(apdu.RAPDUFileNotFound)
 	}
+
+	var rBytes []byte
+
 	switch tag.selectedFileID {
-	case 0xE103: //CC
-		if capdu.GetLe() < 15 {
-			// Bad Le. 0x0F is the correct exact Le
-			return &apdu.RAPDU{
-				SW1: 0x6C,
-				SW2: 0x0F,
-			}
-		}
+	case capabilitycontainer.CCID: // Capability Container
+		// Figure out the File ID
 		fileID := tag.FileID
 		if fileID == 0 {
 			fileID = defaultNDEFFileID
 		}
+
+		// How long is our message?
 		mBytes, _ := tag.Message.Marshal()
 		// FIXME: Overflows?
 		fileLen := helpers.Uint16ToBytes(uint16(len(mBytes)) + 2)
+
+		// Now we can create the ControlTLV
 		tlv := &capabilitycontainer.NDEFFileControlTLV{
 			T:      0x04,
 			L:      0x06,
@@ -150,6 +159,8 @@ func (tag *Tag) doRead(capdu *apdu.CAPDU) *apdu.RAPDU {
 			// FIXME: Make this configurable
 			FileWriteAccessCondition: 0x00,
 		}
+
+		// Attach it to a CC
 		cc := &capabilitycontainer.CapabilityContainer{
 			CCLEN: [2]byte{0x00, 0x0F},
 			MappingVersion: byte(NFCForumMajorVersion)<<4 |
@@ -158,24 +169,31 @@ func (tag *Tag) doRead(capdu *apdu.CAPDU) *apdu.RAPDU {
 			MLc:                [2]byte{0xFF, 0xFF},
 			NDEFFileControlTLV: tlv,
 		}
-		rapdu := apdu.NewRAPDU(apdu.RAPDUCommandCompleted)
-		rbytes, _ := cc.Marshal()
-		rapdu.ResponseBody = rbytes
-		return rapdu
+		rBytes, _ = cc.Marshal()
+
 	case defaultNDEFFileID, tag.FileID: //NDEF File
-		rapdu := apdu.NewRAPDU(apdu.RAPDUCommandCompleted)
 		ndefBytes, _ := tag.Message.Marshal()
 		// FIXME: what about very long messages
 		ndefLen := helpers.Uint16ToBytes(uint16(len(ndefBytes)))
 		var buffer bytes.Buffer
 		buffer.Write(ndefLen[:])
 		buffer.Write(ndefBytes)
-		rapdu.ResponseBody = buffer.Bytes()
-		return rapdu
-
+		rBytes = buffer.Bytes()
 	default:
 		return apdu.NewRAPDU(apdu.RAPDUFileNotFound)
 	}
+
+	// We have rBytes ready. Let's make sure the response
+	// adapts to the offset and Le provided in the CAPDU
+	offset := int(capdu.P2)
+	rLen := int(capdu.GetLe())
+	rBytesLen := len(rBytes)
+	if rLen+offset > rBytesLen {
+		rLen = rBytesLen - offset
+	}
+	rapdu := apdu.NewRAPDU(apdu.RAPDUCommandCompleted)
+	rapdu.ResponseBody = rBytes[offset : offset+rLen]
+	return rapdu
 }
 
 // Unimplemented

@@ -122,7 +122,11 @@ var dummyTestSetsBad = map[string][][]byte{
 	},
 }
 
-func ExampleDevice_Read_dummy_Driver() {
+func ExampleDevice_Read_dummy() {
+	// This example uses the dummy.Driver, but
+	// is exactly the same with the
+	// libnfc.Driver, and would allow you to read
+	// your Yubikey directly with your libnfc-device
 	dummyDriver := &dummy.Driver{
 		// ReceiveBytes should be set in the dummy so there is
 		// something to answer. In this case, we simulate

@@ -20,6 +20,7 @@ package apdu
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"github.com/hsanjuan/nfctype4/helpers"
 )
 
@@ -53,6 +54,26 @@ func (apdu *CAPDU) Reset() {
 	apdu.Lc = []byte{}
 	apdu.Data = []byte{}
 	apdu.Le = []byte{}
+}
+
+// String provides a readable representation of the CAPDU
+func (apdu *CAPDU) String() string {
+	str := ""
+	str += fmt.Sprintf("CLA: %02x | INS: %02x | P1: %02x | P2: %02x",
+		apdu.CLA, apdu.INS, apdu.P1, apdu.P2)
+	str += " | Lc: "
+	for _, b := range apdu.Lc {
+		str += fmt.Sprintf("%02x", b)
+	}
+	str += " | Data: "
+	for _, b := range apdu.Data {
+		str += fmt.Sprintf("%02x", b)
+	}
+	str += " | Le: "
+	for _, b := range apdu.Le {
+		str += fmt.Sprintf("%02x", b)
+	}
+	return str
 }
 
 // GetLc computes the actual Lc value from the Lc bytes. Lc
@@ -224,15 +245,14 @@ func (apdu *CAPDU) Unmarshal(buf []byte) (int, error) {
 	b2 := byte(0)
 	b3 := byte(0)
 	if bodyLen > 0 {
-		b1 = buf[i+1]
+		b1 = buf[i]
 	}
 	if bodyLen > 1 {
-		b2 = buf[i+2]
+		b2 = buf[i+1]
 	}
 	if bodyLen > 2 {
-		b3 = buf[i+3]
+		b3 = buf[i+2]
 	}
-
 	switch {
 	case bodyLen == 0:
 		// Case 1 - L=0 : the body is empty.
