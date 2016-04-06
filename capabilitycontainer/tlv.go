@@ -15,11 +15,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-package nfctype4
+package capabilitycontainer
 
 import (
 	"bytes"
 	"errors"
+	"github.com/hsanjuan/nfctype4/helpers"
 )
 
 // Values allowed for the T fields of TLV Blocks.
@@ -72,7 +73,7 @@ func (tlv *TLV) Unmarshal(buf []byte) (int, error) {
 	if tlv.L[0] == 0xFF { // 3 byte format
 		tlv.L[1] = buf[2]
 		tlv.L[2] = buf[3]
-		vLen = bytesToUint16([2]byte{tlv.L[1], tlv.L[2]})
+		vLen = helpers.BytesToUint16([2]byte{tlv.L[1], tlv.L[2]})
 		if len(buf) < 4+int(vLen) {
 			return 0, errors.New(
 				"TLV.Unmarshal: not enough bytes to parse")
@@ -125,7 +126,7 @@ func (tlv *TLV) check() error {
 
 	var vLen uint16
 	if tlv.L[0] == 0xFF {
-		vLen = bytesToUint16([2]byte{tlv.L[1], tlv.L[2]})
+		vLen = helpers.BytesToUint16([2]byte{tlv.L[1], tlv.L[2]})
 		if vLen < 0xFF {
 			return errors.New(
 				"TLV.check: 3-byte Length's last 2 bytes " +
@@ -154,7 +155,7 @@ type ControlTLV struct {
 	T byte // Should always be 04h
 	L byte // Size of the value field. Always 06h.
 	// A valid File ID: 0001h-E101h, E104h-3EFFh, 3F01h-3FFEh, 4000h-FFFEh.
-	FileID [2]byte
+	FileID uint16
 	// Size of the file containing the NDEF message
 	MaximumFileSize          [2]byte
 	FileReadAccessCondition  byte
@@ -184,8 +185,7 @@ func (cTLV *ControlTLV) Unmarshal(buf []byte) (int, error) {
 
 	cTLV.T = tlv.T
 	cTLV.L = tlv.L[0]
-	cTLV.FileID[0] = tlv.V[0]
-	cTLV.FileID[1] = tlv.V[1]
+	cTLV.FileID = helpers.BytesToUint16([2]byte{tlv.V[0], tlv.V[1]})
 	cTLV.MaximumFileSize[0] = tlv.V[2]
 	cTLV.MaximumFileSize[1] = tlv.V[3]
 	cTLV.FileReadAccessCondition = tlv.V[4]
@@ -212,7 +212,8 @@ func (cTLV *ControlTLV) Marshal() ([]byte, error) {
 	tlv.T = cTLV.T
 	tlv.L[0] = cTLV.L
 	var v bytes.Buffer
-	v.Write(cTLV.FileID[:])
+	fileID := helpers.Uint16ToBytes(cTLV.FileID)
+	v.Write(fileID[:])
 	v.Write(cTLV.MaximumFileSize[:])
 	v.WriteByte(cTLV.FileReadAccessCondition)
 	v.WriteByte(cTLV.FileWriteAccessCondition)
@@ -226,8 +227,7 @@ func (cTLV *ControlTLV) Marshal() ([]byte, error) {
 // ControlTLV have a number of Rerserved values for FileIDs and
 // access conditions which should not be used.
 func (cTLV *ControlTLV) check() error {
-	fileID := bytesToUint16(cTLV.FileID)
-	switch fileID {
+	switch cTLV.FileID {
 	case 0x000, 0xe102, 0xe103, 0x3f00, 0x3fff:
 		return errors.New(
 			"ControlTLV.check: File ID is reserved by ISO/IEC_7816-4")
@@ -236,7 +236,7 @@ func (cTLV *ControlTLV) check() error {
 		return errors.New("ControlTLV.check: File ID is invalid (RFU)")
 	}
 
-	maxLen := bytesToUint16(cTLV.MaximumFileSize)
+	maxLen := helpers.BytesToUint16(cTLV.MaximumFileSize)
 	if 0x0000 <= maxLen && maxLen <= 0x0004 {
 		return errors.New(
 			"ControlTLV.check: Maximum File Size value is RFU")

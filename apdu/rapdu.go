@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-package nfctype4
+package apdu
 
 import (
 	"bytes"

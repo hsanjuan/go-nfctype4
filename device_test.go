@@ -20,6 +20,7 @@ package nfctype4
 import (
 	"fmt"
 	"github.com/hsanjuan/ndef"
+	"github.com/hsanjuan/nfctype4/drivers/dummy"
 	"testing"
 )
 
@@ -121,8 +122,8 @@ var dummyTestSetsBad = map[string][][]byte{
 	},
 }
 
-func ExampleDevice_Read_dummyCommandDriver() {
-	dummyDriver := &DummyCommandDriver{
+func ExampleDevice_Read_dummy_Driver() {
+	dummyDriver := &dummy.Driver{
 		// ReceiveBytes should be set in the dummy so there is
 		// something to answer. In this case, we simulate
 		// a Yubikey.
@@ -145,7 +146,7 @@ func ExampleDevice_Read_dummyCommandDriver() {
 }
 
 func TestRead_goodExamples(t *testing.T) {
-	dummyDriver := new(DummyCommandDriver)
+	dummyDriver := new(dummy.Driver)
 	device := new(Device)
 	device.Setup(dummyDriver)
 	for name, byteSet := range dummyTestSets {
@@ -179,7 +180,7 @@ func TestRead_badExamples(t *testing.T) {
 	}
 	device := new(Device)
 	for name, byteSet := range dummyTestSetsBad {
-		dummyDriver := &DummyCommandDriver{
+		dummyDriver := &dummy.Driver{
 			ReceiveBytes: byteSet,
 		}
 		device.Setup(dummyDriver)

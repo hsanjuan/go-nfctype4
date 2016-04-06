@@ -15,33 +15,28 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-package nfctype4
+package dummy
 
 import (
 	"fmt"
 )
 
-/*
- * Implements a CommandDriver which does nothing
- *
- */
-
-// DummyCommandDriver implements a CommandDriver which does nothing
+// Driver implements a CommandDriver which does nothing
 // and returns pre-programmed responses when it calls TransceiveBytes.
 // It is used for testing, but also can be a simple example of how a
 // CommandDriver is implemented.
-type DummyCommandDriver struct {
+type Driver struct {
 	ReceiveBytes    [][]byte // Responses for every TransceiveBytes call
 	ReceiveBytesPos int
 }
 
 // Initialize does nothing because it is a DummyDriver.
-func (driver *DummyCommandDriver) Initialize() error {
+func (driver *Driver) Initialize() error {
 	return nil
 }
 
 // String returns information about this driver.
-func (driver *DummyCommandDriver) String() string {
+func (driver *Driver) String() string {
 	str := "Dummy driver :)"
 	return str
 }
@@ -52,9 +47,9 @@ func (driver *DummyCommandDriver) String() string {
 //
 // It returns an error if we have already returned all the elements in
 // ReceiveBytes at some point.
-func (driver *DummyCommandDriver) TransceiveBytes(tx []byte, rxLen int) ([]byte, error) {
+func (driver *Driver) TransceiveBytes(tx []byte, rxLen int) ([]byte, error) {
 	if driver.ReceiveBytesPos >= len(driver.ReceiveBytes) {
-		return nil, fmt.Errorf("DummyCommandDriver.TransceiveBytes: "+
+		return nil, fmt.Errorf("Driver.TransceiveBytes: "+
 			"no data to return (index %d)", driver.ReceiveBytesPos)
 	}
 	response := driver.ReceiveBytes[driver.ReceiveBytesPos]
@@ -63,6 +58,6 @@ func (driver *DummyCommandDriver) TransceiveBytes(tx []byte, rxLen int) ([]byte,
 }
 
 // Close does nothing because this is a DummyDriver.
-func (driver *DummyCommandDriver) Close() {
+func (driver *Driver) Close() {
 	return
 }

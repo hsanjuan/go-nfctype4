@@ -15,13 +15,17 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-package nfctype4
+package capabilitycontainer
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/hsanjuan/nfctype4/helpers"
 )
+
+// CCID is the Capability container ID.
+const CCID = uint16(0xE103)
 
 // CapabilityContainer represents a Capability Container File as defined in the
 // section 5.1 of the specification. The main function of the capability
@@ -83,7 +87,7 @@ func (cc *CapabilityContainer) Unmarshal(buf []byte) (int, error) {
 	cc.NDEFFileControlTLV = fcTLV
 	i += parsed
 
-	cclen := bytesToUint16(cc.CCLEN)
+	cclen := helpers.BytesToUint16(cc.CCLEN)
 	for i < int(cclen) {
 		extraTLV := new(TLV)
 		parsed, err = extraTLV.Unmarshal(buf[i:len(buf)])
@@ -140,17 +144,17 @@ func (cc *CapabilityContainer) Marshal() ([]byte, error) {
 // Check tests that a CapabilityContainer follows the specification and
 // returns an error if a problem is found.
 func (cc *CapabilityContainer) check() error {
-	cclen := bytesToUint16(cc.CCLEN)
+	cclen := helpers.BytesToUint16(cc.CCLEN)
 	if (0x0000 <= cclen && cclen <= 0x000e) || cclen == 0xffff {
 		return errors.New("CapabilityContainer.check: CCLEN is RFU")
 	}
 
-	mle := bytesToUint16(cc.MLe)
+	mle := helpers.BytesToUint16(cc.MLe)
 	if 0x0000 <= mle && mle <= 0x000e {
 		return errors.New("CapabilityContainer.check: MLe is RFU")
 	}
 
-	mlc := bytesToUint16(cc.MLc)
+	mlc := helpers.BytesToUint16(cc.MLc)
 	if 0x0000 == mlc {
 		return errors.New("CapabilityContainer.check: MLc is RFU")
 	}

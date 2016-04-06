@@ -17,15 +17,22 @@
 
 // BUG(hector): Update (write/erase) operations are not yet supported
 
-// Package nfctype4 implements the NFC Forum Type 4 Tag Operation
-// Specification, which allows to read the information contained
-// in this popular type of NFC Tags.
+// Package nfctype4 is an implementation of the NFC Forum Type 4 Tag
+// Operation Specification.
 //
-// Use the Device type to perform Read() and Update() operations on the Tag.
+// nfctype4 can be used for both reading Tags, but also for implementing
+// software-based Tags that adjust to the specification.
 //
-// Devices must be Setup() first with a CommandDriver. nfctype4 offers
-// a libnfc command driver, which allows to work with any libnfc-detected
-// device, but custom command drivers are supported too.
+// The `Device` type offers functionality to perform `Read` and `Update`
+// on NFC Type 4 Tags.
+//
+// The `Tag` type allows in turn to implement software-based tags. An
+// static version of a software tag is provided with 'tags/static'.
+//
+// The bridge between the `Device` and the hardware is covered by the
+// `libnfc4/drivers/*`, which implement the `CommandDriver` interface.
+// A `libnfc` driver is provided, which allows working with any
+// libnfc-supported hardware.
 package nfctype4
 
 // This is the NFC Type 4 Tag standard version that we are following.
@@ -33,3 +40,6 @@ const (
 	NFCForumMajorVersion = 2
 	NFCForumMinorVersion = 0
 )
+
+// NDEFAPPLICATION is the name for the NDEF Application.
+const NDEFAPPLICATION = uint64(0xD2760000850101)

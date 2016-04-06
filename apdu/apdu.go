@@ -1,5 +1,3 @@
-// +build !nolibnfc
-
 /***
     Copyright (c) 2016, Hector Sanjuan
 
@@ -17,23 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-package nfctype4
-
-import (
-	"fmt"
-)
-
-func ExampleDevice_Read_libnfcCommandDriver() {
-	// Before running, make sure that the NFC reader device
-	// is detected by libnfc and that the tag is in contact
-	// with the device as it will be read right away or fail.
-	driver := new(LibnfcCommandDriver) // Set Driver to LibNFC
-	device := new(Device)
-	device.Setup(driver)
-	message, err := device.Read() // Read the tag
-	if err != nil {
-		fmt.Println(err)
-	} else { // See what the NDEF message has
-		fmt.Println(message)
-	}
-}
+// Package apdu provides Command and Response APDU (Application Protocol
+// Data Unit) support. APDUs are used to send commands to NFC Tags and
+// to obtain responses for them.
+package apdu

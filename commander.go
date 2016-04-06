@@ -20,6 +20,7 @@ package nfctype4
 import (
 	"errors"
 	"fmt"
+	"github.com/hsanjuan/nfctype4/apdu"
 )
 
 // Commander are capable of performing the NDEF Type 4 Tag Command Set,
@@ -33,11 +34,11 @@ type Commander struct {
 // Select perfoms a select operation by file ID
 // It returns an error if something fails, like cases when the
 // response does not indicate success.
-func (cmder *Commander) Select(fileID []byte) error {
+func (cmder *Commander) Select(fileID uint16) error {
 	if cmder.Driver == nil {
 		return errors.New("command driver not set")
 	}
-	cApdu := NewSelectAPDU(fileID)
+	cApdu := apdu.NewSelectAPDU(fileID)
 	cApduBytes, err := cApdu.Marshal()
 	if err != nil {
 		return err
@@ -48,13 +49,13 @@ func (cmder *Commander) Select(fileID []byte) error {
 		return err
 	}
 
-	rApdu := new(RAPDU)
+	rApdu := new(apdu.RAPDU)
 	rApdu.Unmarshal(response)
 
 	if rApdu.CommandCompleted() {
 		return nil
 	} else if rApdu.FileNotFound() {
-		return fmt.Errorf("Select: File %02x%02xh not found", fileID[0], fileID[1])
+		return fmt.Errorf("Select: File %02xh not found", fileID)
 	} else {
 		return fmt.Errorf("Select: Unknown error. SW1: %02xh. SW2: %02xh",
 			rApdu.SW1,
@@ -71,7 +72,7 @@ func (cmder *Commander) ReadBinary(offset uint16, length uint16) ([]byte, error)
 	if cmder.Driver == nil {
 		return nil, errors.New("Command driver not set")
 	}
-	cApdu := NewReadBinaryAPDU(offset, length)
+	cApdu := apdu.NewReadBinaryAPDU(offset, length)
 	cApduBytes, err := cApdu.Marshal()
 	if err != nil {
 		return nil, err
@@ -81,7 +82,7 @@ func (cmder *Commander) ReadBinary(offset uint16, length uint16) ([]byte, error)
 		return nil, err
 	}
 
-	rApdu := new(RAPDU)
+	rApdu := new(apdu.RAPDU)
 	rApdu.Unmarshal(response)
 	if rApdu.CommandCompleted() {
 		return rApdu.ResponseBody, nil
@@ -106,7 +107,7 @@ func (cmder *Commander) NDEFApplicationSelect() error {
 		return errors.New("Commander.NDEFApplicationSelect: " +
 			"Driver not set")
 	}
-	cApdu := NewNDEFTagApplicationSelectAPDU()
+	cApdu := apdu.NewNDEFTagApplicationSelectAPDU()
 	cApduBytes, err := cApdu.Marshal()
 	if err != nil {
 		return err
@@ -117,7 +118,7 @@ func (cmder *Commander) NDEFApplicationSelect() error {
 		return err
 	}
 
-	rApdu := new(RAPDU)
+	rApdu := new(apdu.RAPDU)
 	rApdu.Unmarshal(response)
 
 	if rApdu.CommandCompleted() {
@@ -131,19 +132,4 @@ func (cmder *Commander) NDEFApplicationSelect() error {
 			rApdu.SW1,
 			rApdu.SW2)
 	}
-}
-
-// CapabilityContainerSelect performs a Select operation on the
-// Capability Container File, which is necessary before reading its
-// contents. It returns an error if the operation fails.
-func (cmder *Commander) CapabilityContainerSelect() error {
-	bytes := uint16ToBytes(CCID)
-	return cmder.Select(bytes[:])
-}
-
-// CapabilityContainerRead performs a read binary operation on the
-// capability container. It returns an error if the operation fails.
-func (cmder *Commander) CapabilityContainerRead() ([]byte, error) {
-	// offset: 0. Length: 15
-	return cmder.ReadBinary(0, 15)
 }

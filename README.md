@@ -5,7 +5,11 @@ nfctype4
 |:-------------:|:--------:|
 | [![Build Status](https://travis-ci.org/hsanjuan/nfctype4.svg?branch=master)](https://travis-ci.org/hsanjuan/nfctype4) [![Coverage Status](https://coveralls.io/repos/github/hsanjuan/nfctype4/badge.svg?branch=master)](https://coveralls.io/github/hsanjuan/nfctype4?branch=master) | [![Build Status](https://travis-ci.org/hsanjuan/nfctype4.svg?branch=unstable)](https://travis-ci.org/hsanjuan/nfctype4) [![Coverage Status](https://coveralls.io/repos/github/hsanjuan/nfctype4/badge.svg?branch=unstable)](https://coveralls.io/github/hsanjuan/nfctype4?branch=unstable) |
 
-Package nfctype4 implements the NFC Forum Type 4 Tag Operation Specification, which allows to read the information contained in this popular type of NFC Tags.
+Package nfctype4 implements the NFC Forum Type 4 Tag Operation Specification.
+
+It `Device` type which allows to interact with NFC Type 4 tags and perform `Read` and `Update` operations on the tags.
+
+It also allows to easily implement software-based NFC Type 4 compliant tags, which can be easily used to provide hardware NFC Readers in target-mode with the necessary functionality to adjust to the specification and act like Type 4 Tags.
 
 Usage and documentation
 -----------------------

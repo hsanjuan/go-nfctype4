@@ -21,12 +21,19 @@ import (
 	"bytes"
 	"errors"
 	"github.com/hsanjuan/ndef"
+	"github.com/hsanjuan/nfctype4/capabilitycontainer"
+	"github.com/hsanjuan/nfctype4/helpers"
 )
 
-// Device represents an NFC Forum device. This usually means physical
-// equipment such as an USB NFC Reader.
+// Device represents an NFC Forum device, that is, an entity
+// which allows to perform Read and Update operations on a NFC Type 4 Tag,
+// by following the operation instructions stated in the specification.
 //
-// Devices can Read and Write NFC Tags using the Commander
+// Interaction with physical and software Tags is done via CommandDrivers.
+// A device needs to be Setup() before use with a CommandDriver which is
+// in charge of sending and receiving bytes from the Tags.
+// The `nfctype4/drivers/libnfc` driver, for example, supports using a
+// libnfc-supported reader to talk to a real NFC Type 4 Tag.
 type Device struct {
 	MajorVersion byte // unused
 	MinorVersion byte // unused
@@ -71,40 +78,40 @@ func (t *Device) Read() (*ndef.Message, error) {
 	}
 
 	// Select Capability Container
-	if err := t.commander.CapabilityContainerSelect(); err != nil {
+	if err := t.commander.Select(capabilitycontainer.CCID); err != nil {
 		return nil, err
 	}
 
-	// Read Capability Container and parse it
-	ccBytes, err := t.commander.CapabilityContainerRead()
+	// Read Capability Container and parse it. It should have 15 bytes.
+	ccBytes, err := t.commander.ReadBinary(0, 15)
 	if err != nil {
 		return nil, err
 	}
-	cc := new(CapabilityContainer)
+	cc := new(capabilitycontainer.CapabilityContainer)
 	if _, err := cc.Unmarshal(ccBytes); err != nil {
 		return nil, err
 	}
 
 	// Check that we can read the tag
 	fcTlv := cc.NDEFFileControlTLV
-	if !(*ControlTLV)(fcTlv).IsFileReadable() {
+	if !(*capabilitycontainer.ControlTLV)(fcTlv).IsFileReadable() {
 		return nil, errors.New(
 			"Device.Read: NDEF File is marked as not readable")
 	}
 
 	// Select the NDEF File
-	if err := t.commander.Select(fcTlv.FileID[:]); err != nil {
+	if err := t.commander.Select(fcTlv.FileID); err != nil {
 		return nil, err
 	}
 
 	// Detect NDEF Message procedure 5.4.1
-	maxReadBinaryLen := bytesToUint16(cc.MLe)
-	maxNdefLen := bytesToUint16(fcTlv.MaximumFileSize)
+	maxReadBinaryLen := helpers.BytesToUint16(cc.MLe)
+	maxNdefLen := helpers.BytesToUint16(fcTlv.MaximumFileSize)
 	nlenBytes, err := t.commander.ReadBinary(0, 2)
 	if err != nil {
 		return nil, err
 	}
-	nlen := bytesToUint16([2]byte{nlenBytes[0], nlenBytes[1]})
+	nlen := helpers.BytesToUint16([2]byte{nlenBytes[0], nlenBytes[1]})
 	if nlen == 0 {
 		return nil, errors.New(
 			"Device.Read: no NDEF Message to read Detected")

@@ -15,18 +15,13 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-package nfctype4
+package apdu
 
 import (
 	"bytes"
 	"errors"
+	"github.com/hsanjuan/nfctype4/helpers"
 )
-
-// CCID is the Capability container ID.
-const CCID = uint16(0xE103)
-
-// NDEFAPPLICATION is the name for the NDEF Application.
-const NDEFAPPLICATION = uint64(0xD2760000850101)
 
 // CAPDU.INS relevant to the Type 4 Tag Specification
 const (
@@ -72,7 +67,7 @@ func (apdu *CAPDU) GetLc() uint16 {
 	case 1:
 		return uint16(apdu.Lc[0])
 	case 3:
-		return bytesToUint16([2]byte{apdu.Lc[1], apdu.Lc[2]})
+		return helpers.BytesToUint16([2]byte{apdu.Lc[1], apdu.Lc[2]})
 	default:
 		return 0
 	}
@@ -86,7 +81,7 @@ func (apdu *CAPDU) SetLc(n uint16) {
 	} else if 1 <= n && n <= 255 { // 1-255
 		apdu.Lc = []byte{byte(n)}
 	} else {
-		nBytes := uint16ToBytes(n)
+		nBytes := helpers.Uint16ToBytes(n)
 		apdu.Lc = []byte{0x00, nBytes[0], nBytes[1]}
 	}
 }
@@ -117,9 +112,9 @@ func (apdu *CAPDU) GetLe() uint16 {
 			//return uint16(65536) // Overflow! FIXME!
 			return uint16(65535)
 		}
-		return bytesToUint16([2]byte{n0, n1})
+		return helpers.BytesToUint16([2]byte{n0, n1})
 	case 3:
-		return bytesToUint16([2]byte{apdu.Le[1], apdu.Le[2]})
+		return helpers.BytesToUint16([2]byte{apdu.Le[1], apdu.Le[2]})
 	default:
 		return 0
 	}
@@ -135,7 +130,7 @@ func (apdu *CAPDU) SetLe(n uint16) {
 	} else if n == 256 {
 		apdu.Le = []byte{byte(0)}
 	} else {
-		nBytes := uint16ToBytes(n)
+		nBytes := helpers.Uint16ToBytes(n)
 		if len(apdu.Lc) > 0 { // Make it 2 bytes
 			apdu.Le = []byte{nBytes[0], nBytes[1]}
 		} else { // 3 bytes then
@@ -279,7 +274,7 @@ func (apdu *CAPDU) Unmarshal(buf []byte) (int, error) {
 		// B3 code Le valued from 1 to 65536
 		apdu.Le = []byte{b1, b2, b3}
 		i += 3
-	case bodyLen == (3+int(bytesToUint16([2]byte{b2, b3}))) && b1 == 0 && (b2|b3) != 0:
+	case bodyLen == (3+int(helpers.BytesToUint16([2]byte{b2, b3}))) && b1 == 0 && (b2|b3) != 0:
 		// Case 3E - L=3 + (B2||B3). (B1)=0 and (B2||B3)=0
 		// It should say: L=3 + (B2||B3). (B1)=0 and (B2||B3)!=0
 		// The Lc field consists of the first 3 bytes where B2 and B3 code Lc (!=0) valued from 1 to 65536
@@ -289,7 +284,7 @@ func (apdu *CAPDU) Unmarshal(buf []byte) (int, error) {
 		i += 3
 		apdu.Data = buf[i : i+int(apdu.GetLc())]
 		i += int(apdu.GetLc())
-	case bodyLen == (5+int(bytesToUint16([2]byte{b2, b3}))) && b1 == 0 && (b2|b3) != 0:
+	case bodyLen == (5+int(helpers.BytesToUint16([2]byte{b2, b3}))) && b1 == 0 && (b2|b3) != 0:
 		//Case 4E - L= 5 + (B2||B3),(B1)=0 and (B2||B3)=0
 		// The Lc field consists of the first 3 bytes where B2 and B3 code Lc (!=0) valued from 1 to 65535
 		//B4 to Bl-2 are the Lc bytes of the data field
@@ -352,17 +347,10 @@ func NewNDEFTagApplicationSelectAPDU() *CAPDU {
 	return cApdu
 }
 
-// NewCapabilityContainerSelectAPDU returns a new Select CAPDU to
-// Select the Capabaility Container.
-func NewCapabilityContainerSelectAPDU() *CAPDU {
-	bytes := uint16ToBytes(CCID)
-	return NewSelectAPDU(bytes[:])
-}
-
 // NewReadBinaryAPDU returns a new CAPDU to perform a binary
 // read with the indicated offset and length.
 func NewReadBinaryAPDU(offset uint16, length uint16) *CAPDU {
-	offsetBytes := uint16ToBytes(offset)
+	offsetBytes := helpers.Uint16ToBytes(offset)
 	cApdu := &CAPDU{
 		CLA: byte(0x00),
 		INS: byte(0xB0),
@@ -375,15 +363,16 @@ func NewReadBinaryAPDU(offset uint16, length uint16) *CAPDU {
 
 // NewSelectAPDU returns a new CAPDU to perform a select
 // operation by ID with the provided fileID
-func NewSelectAPDU(fileID []byte) *CAPDU {
+func NewSelectAPDU(fileID uint16) *CAPDU {
+	dataBuf := helpers.Uint16ToBytes(fileID)
 	cApdu := &CAPDU{
 		CLA:  byte(0x00),
 		INS:  byte(0xA4),
 		P1:   byte(0x00), // Select by Id
 		P2:   byte(0x0C), // First or only occurrence
-		Data: fileID,
+		Data: dataBuf[:],
 	}
-	cApdu.SetLc(uint16(len(fileID))) //File ID length should be 2
+	cApdu.SetLc(2) //File ID length should be 2
 	return cApdu
 }
 

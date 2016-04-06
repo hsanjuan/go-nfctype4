@@ -17,7 +17,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-package nfctype4
+package libnfc
 
 import (
 	"errors"
@@ -25,12 +25,14 @@ import (
 	"github.com/fuzxxl/nfc/2.0/nfc"
 )
 
-// LibnfcCommandDriver implements the CommandDriver interface by
-// using libnfc bindings to send and receive data from the NFC device.
+// Driver implements the CommandDriver interface allowing `Device` to
+// use any libnfc-supported hardware to communicate with a real NFC Tag.
 //
 // For this driver to work, libnfc needs to be correctly installed and
-// configured in the system.
-type LibnfcCommandDriver struct {
+// configured in the system (it should be able to detect any plugged-in
+// readers and poll the desired Targets (that is, detect the tags with which
+// we want to interact with).
+type Driver struct {
 	Modulation   nfc.Modulation // The modulation to use
 	DeviceNumber int            // The libnfc devices number to choose
 	device       *nfc.Device
@@ -41,14 +43,14 @@ type LibnfcCommandDriver struct {
 // Initialize performs the necessary operations to make sure that the
 // driver is in conditions to TransceiveBytes.
 //
-// For the LibnfcCommandDriver this involves detecting available nfc devices,
+// For the Driver this involves detecting available nfc devices,
 // selecting one and setting it up as an Initiator, using it to scan for targets
 // and selecting the first target available (or fail). This means that
 // for initialization to work, the NFC device needs to be visible to the reader
 // already, as otherwise there is no target to work with.
 //
 // It returns an error when some step fails.
-func (driver *LibnfcCommandDriver) Initialize() error {
+func (driver *Driver) Initialize() error {
 	driver.Modulation = nfc.Modulation{Type: nfc.ISO14443a, BaudRate: nfc.Nbr212}
 
 	deviceList, err := nfc.ListDevices()
@@ -94,7 +96,7 @@ func (driver *LibnfcCommandDriver) Initialize() error {
 // String returns some information extracted from libnfc about the NFC device
 // and the target that was selected. It should be used after calling
 // Initialize().
-func (driver *LibnfcCommandDriver) String() string {
+func (driver *Driver) String() string {
 	var str string
 	str += fmt.Sprintf("NeoRead uses libnfc %s\n", nfc.Version())
 	str += fmt.Sprintf("Modulation: Type: %d, BaudRate: %d\n",
@@ -125,7 +127,7 @@ func (driver *LibnfcCommandDriver) String() string {
 // TransceiveBytes is used to send and receive bytes from the libnfc device.
 // It receives a byte slice to send, and an expected maximum length to receive.
 // It returns the received data or an error when something fails.
-func (driver *LibnfcCommandDriver) TransceiveBytes(tx []byte, rxLen int) ([]byte, error) {
+func (driver *Driver) TransceiveBytes(tx []byte, rxLen int) ([]byte, error) {
 	rx := make([]byte, rxLen) //buffer to receive bytes
 	n, err := driver.device.InitiatorTransceiveBytes(tx, rx, -1)
 	if err != nil {
@@ -145,7 +147,7 @@ func (driver *LibnfcCommandDriver) TransceiveBytes(tx []byte, rxLen int) ([]byte
 }
 
 // Close shuts down the driver correctly by closing the device that was used.
-func (driver *LibnfcCommandDriver) Close() {
+func (driver *Driver) Close() {
 	if driver.device != nil {
 		driver.device.Close()
 	}
