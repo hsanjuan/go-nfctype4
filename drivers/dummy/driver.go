@@ -15,6 +15,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
+// Package dummy provides a trivial CommandDriver implementation used for
+// testing and examples.
 package dummy
 
 import (

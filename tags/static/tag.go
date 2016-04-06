@@ -15,6 +15,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
+// Package static provides the implementation of a static software-based
+// NFC Forum Type 4 Tag which holds a NDEF Message.
 package static
 
 import (
@@ -42,7 +44,7 @@ const (
 	NFCForumMinorVersion = 0
 )
 
-// Tag implements a static NFC Type 4 Tags which holds an NDEFMessage.
+// Tag implements a static NFC Type 4 Tags which holds a NDEFMessage.
 //
 // It is static because the message that is returned is always the same
 // regardless of how many times it is Read.

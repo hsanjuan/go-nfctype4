@@ -15,6 +15,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
+// Package swtag provides a CommandDriver implementation which
+// acts as a binary interface to software-based NFC Type 4 Tags which
+// implement the nfctype4.Tag interface.
 package swtag
 
 import (

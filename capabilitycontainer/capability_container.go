@@ -15,6 +15,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
+// Package capabilitycontainer provides support for Capability Containers
+// and TLV Blocks.
 package capabilitycontainer
 
 import (

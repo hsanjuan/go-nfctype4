@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-// Package apdu provides Command and Response APDU (Application Protocol
-// Data Unit) support. APDUs are used to send commands to NFC Tags and
-// to obtain responses for them.
+// Package apdu provides support for Command and Response APDU
+// (Application Protocol Data Unit) support. APDUs are used to
+// send commands to NFC Tags and to obtain responses for them.
 package apdu

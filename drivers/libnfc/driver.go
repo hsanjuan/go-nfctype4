@@ -17,6 +17,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
+// Package libnfc provides a CommandDriver implementation which allows
+// to use libnfc devices (readers etc.) to read and update Type 4 Tags.
 package libnfc
 
 import (

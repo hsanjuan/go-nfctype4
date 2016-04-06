@@ -15,9 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-// Package helpers provides some useful functions to parse 2-byte numbers
-// and serialize them back, a very common operation when Marshaling and
-// Unmarshaling NFC Type 4 types.
+// Package helpers provides some useful functions common to libnfc4.
 package helpers
 
 import ()
