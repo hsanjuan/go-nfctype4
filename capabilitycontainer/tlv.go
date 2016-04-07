@@ -157,7 +157,7 @@ type ControlTLV struct {
 	// A valid File ID: 0001h-E101h, E104h-3EFFh, 3F01h-3FFEh, 4000h-FFFEh.
 	FileID uint16
 	// Size of the file containing the NDEF message
-	MaximumFileSize          [2]byte
+	MaximumFileSize          uint16
 	FileReadAccessCondition  byte
 	FileWriteAccessCondition byte
 }
@@ -186,8 +186,7 @@ func (cTLV *ControlTLV) Unmarshal(buf []byte) (int, error) {
 	cTLV.T = tlv.T
 	cTLV.L = tlv.L[0]
 	cTLV.FileID = helpers.BytesToUint16([2]byte{tlv.V[0], tlv.V[1]})
-	cTLV.MaximumFileSize[0] = tlv.V[2]
-	cTLV.MaximumFileSize[1] = tlv.V[3]
+	cTLV.MaximumFileSize = helpers.BytesToUint16([2]byte{tlv.V[2], tlv.V[3]})
 	cTLV.FileReadAccessCondition = tlv.V[4]
 	cTLV.FileWriteAccessCondition = tlv.V[5]
 
@@ -214,7 +213,8 @@ func (cTLV *ControlTLV) Marshal() ([]byte, error) {
 	var v bytes.Buffer
 	fileID := helpers.Uint16ToBytes(cTLV.FileID)
 	v.Write(fileID[:])
-	v.Write(cTLV.MaximumFileSize[:])
+	mfs := helpers.Uint16ToBytes(cTLV.MaximumFileSize)
+	v.Write(mfs[:])
 	v.WriteByte(cTLV.FileReadAccessCondition)
 	v.WriteByte(cTLV.FileWriteAccessCondition)
 	tlv.V = v.Bytes()
@@ -236,8 +236,7 @@ func (cTLV *ControlTLV) check() error {
 		return errors.New("ControlTLV.check: File ID is invalid (RFU)")
 	}
 
-	maxLen := helpers.BytesToUint16(cTLV.MaximumFileSize)
-	if 0x0000 <= maxLen && maxLen <= 0x0004 {
+	if 0x0000 <= cTLV.MaximumFileSize && cTLV.MaximumFileSize <= 0x0004 {
 		return errors.New(
 			"ControlTLV.check: Maximum File Size value is RFU")
 	}

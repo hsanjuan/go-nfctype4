@@ -105,8 +105,8 @@ func (t *Device) Read() (*ndef.Message, error) {
 	}
 
 	// Detect NDEF Message procedure 5.4.1
-	maxReadBinaryLen := helpers.BytesToUint16(cc.MLe)
-	maxNdefLen := helpers.BytesToUint16(fcTlv.MaximumFileSize)
+	maxReadBinaryLen := cc.MLe
+	maxNdefLen := fcTlv.MaximumFileSize
 	nlenBytes, err := t.commander.ReadBinary(0, 2)
 	if err != nil {
 		return nil, err

@@ -19,7 +19,7 @@ package apdu
 
 import (
 	"bytes"
-	//	"errors"
+	"errors"
 )
 
 // RAPDU types which come handy
@@ -51,6 +51,12 @@ func (apdu *RAPDU) Reset() {
 // It returns the number of bytes parsed or an error if something goes wrong.
 func (apdu *RAPDU) Unmarshal(buf []byte) (int, error) {
 	apdu.Reset()
+
+	if len(buf) < 2 {
+		return 0, errors.New(
+			"RAPDU.Umarshal: apdu needs at least 2 bytes")
+	}
+
 	length := len(buf)
 	apdu.SW1 = buf[length-2]
 	apdu.SW2 = buf[length-1]

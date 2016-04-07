@@ -147,8 +147,6 @@ func (tag *Tag) doRead(capdu *apdu.CAPDU) *apdu.RAPDU {
 
 		// How long is our message?
 		mBytes, _ := tag.Message.Marshal()
-		// FIXME: Overflows?
-		fileLen := helpers.Uint16ToBytes(uint16(len(mBytes)) + 2)
 
 		// Now we can create the ControlTLV
 		tlv := &capabilitycontainer.NDEFFileControlTLV{
@@ -156,7 +154,7 @@ func (tag *Tag) doRead(capdu *apdu.CAPDU) *apdu.RAPDU {
 			L:      0x06,
 			FileID: fileID,
 			// 2 NDEF Len bytes
-			MaximumFileSize:         fileLen,
+			MaximumFileSize:         uint16(len(mBytes)) + 2,
 			FileReadAccessCondition: 0x00,
 			// FIXME: Make this configurable
 			FileWriteAccessCondition: 0x00,
@@ -164,11 +162,11 @@ func (tag *Tag) doRead(capdu *apdu.CAPDU) *apdu.RAPDU {
 
 		// Attach it to a CC
 		cc := &capabilitycontainer.CapabilityContainer{
-			CCLEN: [2]byte{0x00, 0x0F},
+			CCLEN: 15,
 			MappingVersion: byte(NFCForumMajorVersion)<<4 |
 				byte(NFCForumMinorVersion),
-			MLe:                [2]byte{0xFF, 0xFF},
-			MLc:                [2]byte{0xFF, 0xFF},
+			MLe:                255,
+			MLc:                255,
 			NDEFFileControlTLV: tlv,
 		}
 		rBytes, _ = cc.Marshal()

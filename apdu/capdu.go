@@ -358,7 +358,7 @@ func NewNDEFTagApplicationSelectAPDU() *CAPDU {
 			0x00,
 			0x85,
 			0x01,
-			0x01}, // NDEF app name
+			0x01}, // NDEF app name FIXME
 	}
 	cApdu.SetLc(7)
 	// This would set a single-byte Le to 0, meaning response data
