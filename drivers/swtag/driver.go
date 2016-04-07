@@ -23,8 +23,8 @@ package swtag
 import (
 	//	"fmt"
 	"errors"
-	"github.com/hsanjuan/nfctype4"
-	"github.com/hsanjuan/nfctype4/apdu"
+	"github.com/hsanjuan/go-nfctype4"
+	"github.com/hsanjuan/go-nfctype4/apdu"
 )
 
 // Driver implements a CommandDriver to interface with a software tag

@@ -20,7 +20,7 @@ package capabilitycontainer
 import (
 	"bytes"
 	"errors"
-	"github.com/hsanjuan/nfctype4/helpers"
+	"github.com/hsanjuan/go-nfctype4/helpers"
 )
 
 // Values allowed for the T fields of TLV Blocks.

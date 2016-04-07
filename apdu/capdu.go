@@ -21,7 +21,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/hsanjuan/nfctype4/helpers"
+	"github.com/hsanjuan/go-nfctype4/helpers"
 )
 
 // CAPDU.INS relevant to the Type 4 Tag Specification

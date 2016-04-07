@@ -21,7 +21,7 @@ package libnfc
 
 import (
 	"fmt"
-	"github.com/hsanjuan/nfctype4"
+	"github.com/hsanjuan/go-nfctype4"
 )
 
 func ExampleDevice_Read_libnfcCommandDriver() {

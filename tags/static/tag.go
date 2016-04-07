@@ -23,11 +23,11 @@ import (
 	//	"fmt"
 	"bytes"
 	"encoding/binary"
-	"github.com/hsanjuan/ndef"
-	"github.com/hsanjuan/nfctype4"
-	"github.com/hsanjuan/nfctype4/apdu"
-	"github.com/hsanjuan/nfctype4/capabilitycontainer"
-	"github.com/hsanjuan/nfctype4/helpers"
+	"github.com/hsanjuan/go-ndef"
+	"github.com/hsanjuan/go-nfctype4"
+	"github.com/hsanjuan/go-nfctype4/apdu"
+	"github.com/hsanjuan/go-nfctype4/capabilitycontainer"
+	"github.com/hsanjuan/go-nfctype4/helpers"
 )
 
 // BUG(hector): Tag is not super-strict with the error responses

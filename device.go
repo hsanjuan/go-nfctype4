@@ -20,9 +20,9 @@ package nfctype4
 import (
 	"bytes"
 	"errors"
-	"github.com/hsanjuan/ndef"
-	"github.com/hsanjuan/nfctype4/capabilitycontainer"
-	"github.com/hsanjuan/nfctype4/helpers"
+	"github.com/hsanjuan/go-ndef"
+	"github.com/hsanjuan/go-nfctype4/capabilitycontainer"
+	"github.com/hsanjuan/go-nfctype4/helpers"
 )
 
 // Device represents an NFC Forum device, that is, an entity

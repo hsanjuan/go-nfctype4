@@ -18,7 +18,7 @@
 package nfctype4
 
 import (
-	"github.com/hsanjuan/nfctype4/apdu"
+	"github.com/hsanjuan/go-nfctype4/apdu"
 )
 
 // Tag represents a software implementation of a NFC Type 4 Tag.

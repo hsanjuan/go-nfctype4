@@ -20,7 +20,7 @@ package nfctype4
 import (
 	"errors"
 	"fmt"
-	"github.com/hsanjuan/nfctype4/apdu"
+	"github.com/hsanjuan/go-nfctype4/apdu"
 )
 
 // Commander are capable of performing the NDEF Type 4 Tag Command Set,

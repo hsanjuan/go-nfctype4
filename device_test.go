@@ -19,8 +19,8 @@ package nfctype4
 
 import (
 	"fmt"
-	"github.com/hsanjuan/ndef"
-	"github.com/hsanjuan/nfctype4/drivers/dummy"
+	"github.com/hsanjuan/go-ndef"
+	"github.com/hsanjuan/go-nfctype4/drivers/dummy"
 	"testing"
 )
 

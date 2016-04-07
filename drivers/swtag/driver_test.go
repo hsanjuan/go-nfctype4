@@ -18,7 +18,7 @@
 package swtag
 
 import (
-	"github.com/hsanjuan/nfctype4/apdu"
+	"github.com/hsanjuan/go-nfctype4/apdu"
 	"testing"
 )
 

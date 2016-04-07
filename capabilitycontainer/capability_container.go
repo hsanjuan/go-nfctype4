@@ -23,7 +23,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/hsanjuan/nfctype4/helpers"
+	"github.com/hsanjuan/go-nfctype4/helpers"
 )
 
 // CCID is the Capability container ID.
