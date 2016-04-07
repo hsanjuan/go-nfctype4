@@ -5,7 +5,7 @@ then
     exit 1
 fi
 
-echo "mode: set" > fullcov.out
+echo "mode: count" > fullcov.out
 dirs=$(find ./* -maxdepth 10 -type d )
 dirs=". $dirs"
 for dir in $dirs;
@@ -15,7 +15,7 @@ do
             go test -coverprofile=profile.out -covermode=count "$dir" -tags nolibnfc
             if [ -f profile.out ]
             then
-                cat profile.out | grep -v "mode: set" >> fullcov.out
+                cat profile.out | grep -v "^mode: count" >> fullcov.out
             fi
         fi
 done
