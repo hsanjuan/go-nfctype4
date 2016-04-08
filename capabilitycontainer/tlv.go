@@ -20,6 +20,7 @@ package capabilitycontainer
 import (
 	"bytes"
 	"errors"
+
 	"github.com/hsanjuan/go-nfctype4/helpers"
 )
 
@@ -65,12 +66,13 @@ func (tlv *TLV) Unmarshal(buf []byte) (int, error) {
 		return 1, nil
 	}
 	tlv.L[0] = buf[1]
-	if len(buf) < 2+int(tlv.L[0]) { // At least
-		return 0, errors.New("TLV.Unmarshal: TLV.L field is malformed")
-	}
 	vLen := uint16(0)
 	var parsed int
 	if tlv.L[0] == 0xFF { // 3 byte format
+		if len(buf) < 4 {
+			return 0, errors.New(
+				"TLV.Unmarshal: not enough bytes to parse")
+		}
 		tlv.L[1] = buf[2]
 		tlv.L[2] = buf[3]
 		vLen = helpers.BytesToUint16([2]byte{tlv.L[1], tlv.L[2]})
