@@ -24,6 +24,7 @@ package libnfc
 import (
 	"errors"
 	"fmt"
+
 	"github.com/fuzxxl/nfc/2.0/nfc"
 )
 
@@ -140,11 +141,6 @@ func (driver *Driver) TransceiveBytes(tx []byte, rxLen int) ([]byte, error) {
 		}
 		return nil, err
 	}
-	fmt.Print("{ ")
-	for _, b := range rx[0:n] {
-		fmt.Printf("0x%02x, ", b)
-	}
-	fmt.Println(" },")
 	return rx[0:n], nil
 }
 
