@@ -15,136 +15,31 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
+// BUG(hector): Update (write/erase) operations are not yet supported
+
+// Package nfctype4 is an implementation of the NFC Forum Type 4 Tag
+// Operation Specification.
+//
+// nfctype4 can be used for both reading Tags, but also for implementing
+// software-based Tags that adjust to the specification.
+//
+// The `Device` type offers functionality to perform `Read` and `Update`
+// on NFC Type 4 Tags.
+//
+// The `Tag` type allows in turn to implement software-based tags. An
+// static version of a software tag is provided with 'tags/static'.
+//
+// The bridge between the `Device` and the hardware is covered by the
+// `libnfc4/drivers/*`, which implement the `CommandDriver` interface.
+// A `libnfc` driver is provided, which allows working with any
+// libnfc-supported hardware.
 package nfctype4
 
-import (
-	"bytes"
-	"errors"
-	"github.com/hsanjuan/ndef"
-)
-
+// This is the NFC Type 4 Tag standard version that we are following.
 const (
-	NFC_FORUM_MAJOR_VERSION = 2
-	NFC_FORUM_MINOR_VERSION = 0
+	NFCForumMajorVersion = 2
+	NFCForumMinorVersion = 0
 )
 
-// Drivers
-const (
-	DUMMY = iota
-	LIBNFC
-)
-
-type CommandDriver interface {
-	Initialize() error
-	Close()
-	String() string
-	TransceiveBytes(tx []byte, rx_len int) ([]byte, error)
-}
-
-// Driver can be set up manually or using Setup()
-var Driver CommandDriver
-
-func Setup(driver_i int) error {
-	switch driver_i {
-	case DUMMY:
-		dr := new(DummyCommandDriver)
-		Driver = dr
-	case LIBNFC:
-		dr := new(LibNFCCommandDriver)
-		Driver = dr
-	}
-	return nil
-}
-
-// Reads a tag
-// Returns the NDEFMessage stored in the tag, or an error if something went wrong
-//
-func Read() (*ndef.Message, error) {
-	if Driver == nil {
-		err_txt := "The Command Driver has not been configured. " +
-			"Use nfctype4.Setup(nfctype4.LIBNFC|...|) or add your custom with " +
-			"nfctype4.Driver = YourCommandDriver"
-		return nil, errors.New(err_txt)
-	}
-
-	// Initialize driver and make sure we close it at the end
-	err := Driver.Initialize()
-	defer Driver.Close()
-	if err != nil {
-		return nil, err
-	}
-	// Select NDEF Application
-	if err := NDEFApplicationSelect(); err != nil {
-		return nil, err
-	}
-
-	// Select Capability Container
-	if err := CapabilityContainerSelect(); err != nil {
-		return nil, err
-	}
-
-	// Read Capability Container and parse it
-	cc_bytes, err := CapabilityContainerRead()
-	if err != nil {
-		return nil, err
-	}
-	cc := new(CapabilityContainer)
-	if _, err := cc.ParseBytes(cc_bytes); err != nil {
-		return nil, err
-	}
-
-	// Check that we can read the tag
-	fc_tlv := cc.NDEFFileControlTLV
-	if !(*ControlTLV)(fc_tlv).IsFileReadable() {
-		return nil, errors.New("NDEF File is marked as not readable")
-	}
-
-	// Select the NDEF File
-	if err := Select(fc_tlv.FileID[:]); err != nil {
-		return nil, err
-	}
-
-	// Detect NDEF Message procedure 5.4.1
-	maximum_readbinary_size := BytesToUint16(cc.MLe)
-	maximum_ndef_file_size := BytesToUint16(fc_tlv.MaximumFileSize)
-	nlen_bytes, err := ReadBinary(0, 2)
-	if err != nil {
-		return nil, err
-	}
-	nlen := BytesToUint16([2]byte{nlen_bytes[0], nlen_bytes[1]})
-	if nlen == 0 {
-		return nil, errors.New("No NDEF Message to read Detected")
-	} else if nlen > maximum_ndef_file_size-2 {
-		return nil, errors.New("Type 4 Tag platform is not in a valid state")
-	}
-
-	// Message detected
-	// Read length needs to be the minimum between 255, maximum_readbinary_size and neln
-	read_length := maximum_readbinary_size
-	if nlen < read_length {
-		read_length = nlen
-	}
-	// Read messages doing as many ReadBinary calls as necessary
-	total_read := uint16(0)
-	var buffer bytes.Buffer
-	for total_read < nlen {
-		if nlen-total_read < read_length { //last round
-			read_length = nlen - total_read
-		}
-		// Always offset the nlen bytes (2)
-		chunk, err := ReadBinary(2+total_read, read_length)
-		if _, err = buffer.Write(chunk); err != nil {
-			return nil, err
-		}
-		total_read += read_length
-	}
-
-	ndef_bytes := buffer.Bytes()
-	ndef_message := new(ndef.Message)
-	if _, err := ndef_message.ParseBytes(ndef_bytes); err != nil {
-		return nil, err
-	}
-
-	// Finally, return the parsed NDEF Message
-	return ndef_message, nil
-}
+// NDEFAPPLICATION is the name for the NDEF Application.
+const NDEFAPPLICATION = uint64(0xD2760000850101)

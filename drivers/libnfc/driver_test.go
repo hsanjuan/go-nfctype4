@@ -1,3 +1,5 @@
+// +build !nolibnfc
+
 /***
     Copyright (c) 2016, Hector Sanjuan
 
@@ -15,16 +17,24 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-package nfctype4
+package libnfc
 
-import ()
+import (
+	"fmt"
+	"github.com/hsanjuan/go-nfctype4"
+)
 
-func BytesToUint16(field [2]byte) uint16 {
-	return uint16(field[0])<<8 | uint16(field[1])
-}
-
-func Uint16ToBytes(value uint16) [2]byte {
-	byte0 := byte(value >> 8)
-	byte1 := byte(0x00ff & value) //Probably the casting would suffice
-	return [2]byte{byte0, byte1}
+func ExampleDevice_Read_libnfcCommandDriver() {
+	// Before running, make sure that the NFC reader device
+	// is detected by libnfc and that the tag is in contact
+	// with the device as it will be read right away or fail.
+	driver := new(Driver) // Set Driver to LibNFC
+	device := new(nfctype4.Device)
+	device.Setup(driver)
+	message, err := device.Read() // Read the tag
+	if err != nil {
+		fmt.Println(err)
+	} else { // See what the NDEF message has
+		fmt.Println(message)
+	}
 }
