@@ -43,8 +43,8 @@ type Device struct {
 
 // Setup makes configures this device to use the provided
 // command driver to perform operations with the Tag
-func (t *Device) Setup(cmdDriver CommandDriver) {
-	t.commander = &Commander{
+func (dev *Device) Setup(cmdDriver CommandDriver) {
+	dev.commander = &Commander{
 		Driver: cmdDriver,
 	}
 }
@@ -61,30 +61,30 @@ func (t *Device) Setup(cmdDriver CommandDriver) {
 //
 // It returns the NDEFMessage stored in the tag, or an error
 // if something went wrong.
-func (t *Device) Read() (*ndef.Message, error) {
-	if t.commander == nil {
+func (dev *Device) Read() (*ndef.Message, error) {
+	if dev.commander == nil {
 		return nil, errors.New("The Device has not been Setup. " +
 			"Please run Device.Setup() first")
 	}
 
 	// Initialize driver and make sure we close it at the end
-	err := t.commander.Driver.Initialize()
-	defer t.commander.Driver.Close()
+	err := dev.commander.Driver.Initialize()
+	defer dev.commander.Driver.Close()
 	if err != nil {
 		return nil, err
 	}
 	// Select NDEF Application
-	if err := t.commander.NDEFApplicationSelect(); err != nil {
+	if err := dev.commander.NDEFApplicationSelect(); err != nil {
 		return nil, err
 	}
 
 	// Select Capability Container
-	if err := t.commander.Select(capabilitycontainer.CCID); err != nil {
+	if err := dev.commander.Select(capabilitycontainer.CCID); err != nil {
 		return nil, err
 	}
 
 	// Read Capability Container and parse it. It should have 15 bytes.
-	ccBytes, err := t.commander.ReadBinary(0, 15)
+	ccBytes, err := dev.commander.ReadBinary(0, 15)
 	if err != nil {
 		return nil, err
 	}
@@ -101,14 +101,14 @@ func (t *Device) Read() (*ndef.Message, error) {
 	}
 
 	// Select the NDEF File
-	if err := t.commander.Select(fcTlv.FileID); err != nil {
+	if err := dev.commander.Select(fcTlv.FileID); err != nil {
 		return nil, err
 	}
 
 	// Detect NDEF Message procedure 5.4.1
 	maxReadBinaryLen := cc.MLe
 	maxNdefLen := fcTlv.MaximumFileSize
-	nlenBytes, err := t.commander.ReadBinary(0, 2)
+	nlenBytes, err := dev.commander.ReadBinary(0, 2)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (t *Device) Read() (*ndef.Message, error) {
 			readLen = nlen - totalRead
 		}
 		// Always offset the nlen bytes (2)
-		chunk, err := t.commander.ReadBinary(2+totalRead, readLen)
+		chunk, err := dev.commander.ReadBinary(2+totalRead, readLen)
 		if err != nil {
 			return nil, err
 		}
