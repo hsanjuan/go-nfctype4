@@ -236,3 +236,107 @@ func TestCAPDUNew(t *testing.T) {
 	}
 	capdu = NewCapabilityContainerReadAPDU()
 }
+
+func TestCAPDUMarshalBad(t *testing.T) {
+	testcases := map[string]*CAPDU{
+		"lc_1byte_cannot_be_0": &CAPDU{
+			CLA:  0x04,
+			INS:  0x02,
+			P1:   0x00,
+			P2:   0x00,
+			Lc:   []byte{0x00},
+			Data: []byte{},
+			Le:   []byte{0x00},
+		},
+		"lc_cannot_have_2_bytes": &CAPDU{
+			CLA:  0x04,
+			INS:  0x02,
+			P1:   0x00,
+			P2:   0x00,
+			Lc:   []byte{0x00, 0x01},
+			Data: []byte{},
+			Le:   []byte{0x00},
+		},
+		"lc_3_bytes_first_byte_must_be_0": &CAPDU{
+			CLA:  0x04,
+			INS:  0x02,
+			P1:   0x00,
+			P2:   0x00,
+			Lc:   []byte{0x03, 0x00, 0x01},
+			Data: []byte{},
+			Le:   []byte{0x00},
+		},
+		"lc_3_bytes_all_bytes_cannot_be_0": &CAPDU{
+			CLA:  0x04,
+			INS:  0x02,
+			P1:   0x00,
+			P2:   0x00,
+			Lc:   []byte{0x00, 0x00, 0x00},
+			Data: []byte{},
+			Le:   []byte{0x00},
+		},
+		"lc_cannot_have_more_than_3_bytes": &CAPDU{
+			CLA:  0x04,
+			INS:  0x02,
+			P1:   0x00,
+			P2:   0x00,
+			Lc:   []byte{0x00, 0x01, 0x00, 0x00},
+			Data: []byte{},
+			Le:   []byte{0x00},
+		},
+		"lc_different_than_datalen": &CAPDU{
+			CLA:  0x04,
+			INS:  0x02,
+			P1:   0x00,
+			P2:   0x00,
+			Lc:   []byte{0x02},
+			Data: []byte{0xdd},
+			Le:   []byte{},
+		},
+		"2_byte_le_needs_lc": &CAPDU{
+			CLA:  0x04,
+			INS:  0x02,
+			P1:   0x00,
+			P2:   0x00,
+			Lc:   []byte{},
+			Data: []byte{},
+			Le:   []byte{0x00, 0x01},
+		},
+		"3_byte_le_cannot_have_lc": &CAPDU{
+			CLA:  0x04,
+			INS:  0x02,
+			P1:   0x00,
+			P2:   0x00,
+			Lc:   []byte{0x01},
+			Data: []byte{0xdd},
+			Le:   []byte{0x00, 0x01, 0x00},
+		},
+		"3_byte_le_first_byte_must_be_0": &CAPDU{
+			CLA:  0x04,
+			INS:  0x02,
+			P1:   0x00,
+			P2:   0x00,
+			Lc:   []byte{},
+			Data: []byte{},
+			Le:   []byte{0x01, 0x01, 0x00},
+		},
+		"le_cannot_have_more_than_3_bytes": &CAPDU{
+			CLA:  0x04,
+			INS:  0x02,
+			P1:   0x00,
+			P2:   0x00,
+			Lc:   []byte{},
+			Data: []byte{},
+			Le:   []byte{0x01, 0x01, 0x00, 0x00},
+		},
+	}
+	for k, capdu := range testcases {
+		_, err := capdu.Marshal()
+		if err == nil {
+			t.Error("Testcase", k, "should have failed")
+		} else {
+			// FIXME: are we getting the error we expect?
+			t.Logf("%s: %s", k, err.Error())
+		}
+	}
+}

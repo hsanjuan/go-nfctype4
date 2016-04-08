@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+
 	"github.com/hsanjuan/go-nfctype4/helpers"
 )
 
@@ -185,7 +186,7 @@ func (apdu *CAPDU) check() error {
 		}
 	case len(lc) > 3:
 		return errors.New(
-			"CAPDU.Check: APDU Lc cannot have more than 3")
+			"CAPDU.Check: APDU Lc cannot have more than 3 bytes")
 	}
 
 	// Test Le
