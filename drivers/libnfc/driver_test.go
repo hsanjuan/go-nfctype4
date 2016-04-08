@@ -21,6 +21,7 @@ package libnfc
 
 import (
 	"fmt"
+
 	"github.com/hsanjuan/go-nfctype4"
 )
 

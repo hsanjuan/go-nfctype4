@@ -18,8 +18,9 @@
 package swtag
 
 import (
-	"github.com/hsanjuan/go-nfctype4/apdu"
 	"testing"
+
+	"github.com/hsanjuan/go-nfctype4/apdu"
 )
 
 type MockTag struct{}

@@ -20,6 +20,7 @@ package nfctype4
 import (
 	"errors"
 	"fmt"
+
 	"github.com/hsanjuan/go-nfctype4/apdu"
 )
 

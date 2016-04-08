@@ -20,6 +20,7 @@ package nfctype4
 import (
 	"bytes"
 	"errors"
+
 	"github.com/hsanjuan/go-ndef"
 	"github.com/hsanjuan/go-nfctype4/capabilitycontainer"
 	"github.com/hsanjuan/go-nfctype4/helpers"

@@ -18,8 +18,6 @@
 // Package helpers provides some useful functions common to libnfc4.
 package helpers
 
-import ()
-
 // BytesToUint16 takes a 2-byte array and returns the corresponding
 // uint16 value (BigEndian).
 func BytesToUint16(field [2]byte) uint16 {

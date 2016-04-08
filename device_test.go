@@ -19,9 +19,10 @@ package nfctype4
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/hsanjuan/go-ndef"
 	"github.com/hsanjuan/go-nfctype4/drivers/dummy"
-	"testing"
 )
 
 var dummyTestSets = map[string][][]byte{

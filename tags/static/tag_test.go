@@ -20,6 +20,7 @@ package static
 import (
 	//	"testing"
 	"fmt"
+
 	"github.com/hsanjuan/go-ndef"
 	"github.com/hsanjuan/go-nfctype4"
 	"github.com/hsanjuan/go-nfctype4/drivers/swtag"

@@ -23,6 +23,7 @@ import (
 	//	"fmt"
 	"bytes"
 	"encoding/binary"
+
 	"github.com/hsanjuan/go-ndef"
 	"github.com/hsanjuan/go-nfctype4"
 	"github.com/hsanjuan/go-nfctype4/apdu"
