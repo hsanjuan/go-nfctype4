@@ -201,6 +201,7 @@ func TestCAPDUMarshalUnmarshal(t *testing.T) {
 		capdu.Unmarshal(c.Input)
 		capduBytes, _ := capdu.Marshal()
 		expectedBytes, _ := c.Expected.Marshal()
+		t.Log(capdu)
 		t.Logf("Expected: % 02X", expectedBytes)
 		t.Logf("Got     : % 02X ", capduBytes)
 
