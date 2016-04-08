@@ -61,6 +61,107 @@ func TestMarshalUnmarshal(t *testing.T) {
 		},
 	}
 
+	testcasesbad := map[string]*CapabilityContainer{
+		"bad_cclen": &CapabilityContainer{
+			CCLEN:          3, // bad
+			MappingVersion: 0x20,
+			MLe:            255,
+			MLc:            255,
+			NDEFFileControlTLV: &NDEFFileControlTLV{
+				T:                        0x04,
+				L:                        0x06,
+				FileID:                   0xE104,
+				MaximumFileSize:          90,
+				FileReadAccessCondition:  0,
+				FileWriteAccessCondition: 0,
+			},
+		},
+		"bad_mle": &CapabilityContainer{
+			CCLEN:          20,
+			MappingVersion: 0x20,
+			MLe:            0, //bad
+			MLc:            255,
+			NDEFFileControlTLV: &NDEFFileControlTLV{
+				T:                        0x04,
+				L:                        0x06,
+				FileID:                   0xE104,
+				MaximumFileSize:          90,
+				FileReadAccessCondition:  0,
+				FileWriteAccessCondition: 0,
+			},
+			TLVBlocks: []*TLV{
+				&TLV{
+					T: 0x05,
+					L: [3]byte{0x01, 0x00, 0x00},
+					V: []byte{0xFF},
+				},
+			},
+		},
+		"bad_mlc": &CapabilityContainer{
+			CCLEN:          20,
+			MappingVersion: 0x20,
+			MLe:            255,
+			MLc:            0, //bad
+			NDEFFileControlTLV: &NDEFFileControlTLV{
+				T:                        0x04,
+				L:                        0x06,
+				FileID:                   0xE104,
+				MaximumFileSize:          90,
+				FileReadAccessCondition:  0,
+				FileWriteAccessCondition: 0,
+			},
+			TLVBlocks: []*TLV{
+				&TLV{
+					T: 0x05,
+					L: [3]byte{0x01, 0x00, 0x00},
+					V: []byte{0xFF},
+				},
+			},
+		},
+		"bad_ftlv": &CapabilityContainer{
+			CCLEN:          20,
+			MappingVersion: 0x20,
+			MLe:            255,
+			MLc:            255,
+			NDEFFileControlTLV: &NDEFFileControlTLV{
+				T:                        0x04,
+				L:                        0x06,
+				FileID:                   0xE102, //bad
+				MaximumFileSize:          90,
+				FileReadAccessCondition:  0,
+				FileWriteAccessCondition: 0,
+			},
+			TLVBlocks: []*TLV{
+				&TLV{
+					T: 0x05,
+					L: [3]byte{0x01, 0x00, 0x00},
+					V: []byte{0xFF},
+				},
+			},
+		},
+		"bad_tlv": &CapabilityContainer{
+			CCLEN:          20,
+			MappingVersion: 0x20,
+			MLe:            255,
+			MLc:            255,
+			NDEFFileControlTLV: &NDEFFileControlTLV{
+				T:                        0x04,
+				L:                        0x06,
+				FileID:                   0xE104,
+				MaximumFileSize:          90,
+				FileReadAccessCondition:  0,
+				FileWriteAccessCondition: 0,
+			},
+			TLVBlocks: []*TLV{
+				&TLV{
+					T: 0x00, //bad
+					L: [3]byte{0x01, 0x00, 0x00},
+					V: []byte{0xFF},
+				},
+			},
+		},
+	}
+	t.Log("Testing with good CCs")
 	for _, c := range testcases {
 		ccBytes, _ := c.Marshal()
 		tempcc := &CapabilityContainer{}
@@ -72,4 +173,15 @@ func TestMarshalUnmarshal(t *testing.T) {
 			t.Fail()
 		}
 	}
+	t.Log("Testing with bad CCs")
+	for k, c := range testcasesbad {
+		_, err := c.Marshal()
+		if err == nil {
+			t.Error("Testcase", k, "should have failed")
+		} else {
+			// FIXME: are we getting the error we expect?
+			t.Logf("%s: %s", k, err.Error())
+		}
+	}
+
 }
