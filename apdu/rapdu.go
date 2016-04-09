@@ -20,6 +20,7 @@ package apdu
 import (
 	"bytes"
 	"errors"
+	"fmt"
 )
 
 // RAPDU types which come handy
@@ -44,6 +45,16 @@ func (apdu *RAPDU) Reset() {
 	apdu.ResponseBody = []byte{}
 	apdu.SW1 = 0
 	apdu.SW2 = 0
+}
+
+// String provides a string representation of the RAPDU
+func (apdu *RAPDU) String() string {
+	str := ""
+	str += fmt.Sprintf("SW1: %02x SW2: %02x | Data: ", apdu.SW1, apdu.SW2)
+	for _, b := range apdu.ResponseBody {
+		str += fmt.Sprintf("%02x ", b)
+	}
+	return str
 }
 
 // Unmarshal parses a byte slice and sets the RAPDU fields accordingly.

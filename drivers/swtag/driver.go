@@ -17,14 +17,14 @@
 
 // Package swtag provides a CommandDriver implementation which
 // acts as a binary interface to software-based NFC Type 4 Tags which
-// implement the nfctype4.Tag interface.
+// implement the tags.Tag interface.
 package swtag
 
 import (
-	//	"fmt"
 	"errors"
-	"github.com/hsanjuan/go-nfctype4"
+
 	"github.com/hsanjuan/go-nfctype4/apdu"
+	"github.com/hsanjuan/go-nfctype4/tags"
 )
 
 // Driver implements a CommandDriver to interface with a software tag
@@ -44,7 +44,7 @@ import (
 // a reader. This driver makes it trivial to provide a libnfc device in
 // Target mode with full-fledged Type 4 Tag behaviour.
 type Driver struct {
-	Tag nfctype4.Tag
+	Tag tags.Tag
 }
 
 // Initialize does nothing because software Tags don't need initialization.
@@ -80,8 +80,9 @@ func (driver *Driver) TransceiveBytes(tx []byte, rxLen int) ([]byte, error) {
 	if _, err := capdu.Unmarshal(tx); err != nil {
 		return nil, err
 	}
-
+	// fmt.Println(capdu)
 	rapdu := driver.Tag.Command(capdu)
+	// fmt.Println(rapdu)
 	rxBuf, err := rapdu.Marshal()
 	if err != nil {
 		return nil, err

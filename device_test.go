@@ -18,10 +18,14 @@
 package nfctype4
 
 import (
+	"bytes"
 	"fmt"
+	"testing"
+
 	"github.com/hsanjuan/go-ndef"
 	"github.com/hsanjuan/go-nfctype4/drivers/dummy"
-	"testing"
+	"github.com/hsanjuan/go-nfctype4/drivers/swtag"
+	"github.com/hsanjuan/go-nfctype4/tags/static"
 )
 
 var dummyTestSets = map[string][][]byte{
@@ -166,7 +170,7 @@ func TestRead_goodExamples(t *testing.T) {
 func TestRead_badExamples(t *testing.T) {
 	expectedMessages := map[string]string{
 		"bad_ndef_select":                      "Commander.NDEFApplicationSelect: unknown error. SW1: 00h. SW2: 00h",
-		"cc_file_not_found":                    "Select: File e103h not found",
+		"cc_file_not_found":                    "Commander.Select: File e103h not found",
 		"bad_cc_read":                          "CapabilityContainer.Unmarshal: not enough bytes to parse",
 		"bad_cc_size":                          "CapabilityContainer.ParseBytes: not enough bytes to parse",
 		"bad_cc_cclen":                         "CapabilityContainer.Unmarshal: expected 14 bytes but parsed 15 bytes",
@@ -174,12 +178,12 @@ func TestRead_badExamples(t *testing.T) {
 		"bad_cc_mle":                           "CapabilityContainer.check: MLe is RFU",
 		"bad_cc_control_tlv_type":              "NDEFFileControlTLV.Unmarshal: TLV is not a NDEF File Control TLV",
 		"bad_cc_control_tlv_access_conditions": "ControlTLV.check: Read Access Condition has RFU value",
-		"ndef_file_read_protected":             "Device.Read: NDEF File is marked as not readable",
-		"ndef_file_not_found":                  "Select: File e104h not found",
+		"ndef_file_read_protected":             "Device.Read: NDEF File is marked as not readable.",
+		"ndef_file_not_found":                  "Commander.Select: File e104h not found",
 		"ndef_file_select_error":               "Select: Unknown error. SW1: 00h. SW2: 00h",
-		"ndef_file_zero_length":                "Device.Read: no NDEF Message to read Detected",
+		"ndef_file_zero_length":                "Device.Read: no NDEF Message detected.",
 		"device_invalid_state":                 "Device.Read: Device is not in a valid state",
-		"ndef_file_read_error":                 "ReadBinary: Error. SW1: 00h. SW2: 00h",
+		"ndef_file_read_error":                 "Commander.ReadBinary: Error. SW1: 00h. SW2: 00h",
 		"ndef_file_bad_record":                 "Message.checkRecords: A single record cannot have the Chunk flag set",
 	}
 	device := new(Device)
@@ -198,6 +202,108 @@ func TestRead_badExamples(t *testing.T) {
 			}
 		} else {
 			t.Error("Device.Read should have errored")
+		}
+	}
+}
+
+func TestUpdate(t *testing.T) {
+	// We will use the software tags
+
+	tag := new(static.Tag)
+	tag.Initialize() // empty state
+
+	driver := &swtag.Driver{
+		Tag: tag,
+	}
+	device := new(Device)
+	device.Setup(driver)
+
+	// First test with a very simple message
+	simpleMsg := &ndef.Message{
+		TNF:     ndef.NFCForumWellKnownType,
+		Type:    []byte("T"),
+		Payload: []byte("This is a text message"),
+	}
+
+	err := device.Update(simpleMsg)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	readMsg, err := device.Read()
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if !bytes.Equal(simpleMsg.Payload, readMsg.Payload) {
+		t.Error("Payloads don't match for simpleMsg")
+	}
+
+	// Now test with a very long size
+	longMsg := &ndef.Message{
+		TNF:  ndef.NFCForumWellKnownType,
+		Type: []byte("T"),
+	}
+	longMsg.Payload = make([]byte, 0xFFE0)
+	err = device.Update(longMsg)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	readMsg, err = device.Read()
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if !bytes.Equal(longMsg.Payload, readMsg.Payload) {
+		t.Error("Payloads don't match for longMsg")
+	}
+
+	// Now test with a message over the maximum size
+	badMsg := &ndef.Message{
+		TNF:  ndef.NFCForumWellKnownType,
+		Type: []byte("T"),
+	}
+	badMsg.Payload = make([]byte, 0xFFFE)
+	err = device.Update(badMsg)
+	if err == nil {
+		t.Error("Update with badMsg should have failed")
+	} else {
+		t.Log("The expected error was:", err)
+	}
+}
+
+func TestFormat(t *testing.T) {
+	// We will use the software tags
+
+	tag := new(static.Tag)
+	tag.Initialize()
+
+	// First assume our tag has a simple message
+	simpleMsg := &ndef.Message{
+		TNF:     ndef.NFCForumWellKnownType,
+		Type:    []byte("T"),
+		Payload: []byte("This is a text message"),
+	}
+	tag.SetMessage(simpleMsg)
+
+	driver := &swtag.Driver{
+		Tag: tag,
+	}
+	device := new(Device)
+	device.Setup(driver)
+
+	// Format the tag
+	err := device.Format()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	// Try to read
+	_, err = device.Read()
+	if err == nil {
+		t.Error("Reading from an empty tag should have failed")
+	} else {
+		if err.Error() != "Device.Read: no NDEF Message detected." {
+			t.Error("Unexpected error happened: ", err.Error())
 		}
 	}
 }

@@ -63,10 +63,12 @@ func (driver *Driver) Initialize() error {
 	driver.deviceList = deviceList
 
 	if len(deviceList) == 0 {
-		return errors.New("no libnfc devices detected")
+		return errors.New("Driver.Initialize: " +
+			"no libnfc devices detected.")
 	}
 	if len(deviceList) <= driver.DeviceNumber {
-		return fmt.Errorf("libnfc does not provide device %d",
+		return fmt.Errorf("Driver.Initialize: "+
+			"libnfc does not provide device %d.",
 			driver.DeviceNumber)
 	}
 	device, err := nfc.Open(deviceList[driver.DeviceNumber])
@@ -83,7 +85,8 @@ func (driver *Driver) Initialize() error {
 	var targets []nfc.Target
 	targets, err = driver.device.InitiatorListPassiveTargets(driver.Modulation)
 	if len(targets) == 0 {
-		return errors.New("no targets detected. Place tag on reader and retry")
+		return errors.New("Driver.Initialize: " +
+			"no targets detected. Place tag on reader and retry.")
 	}
 	driver.target = targets[0].(*nfc.ISO14443aTarget)
 

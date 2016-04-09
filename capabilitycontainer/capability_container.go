@@ -23,6 +23,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+
 	"github.com/hsanjuan/go-nfctype4/helpers"
 )
 

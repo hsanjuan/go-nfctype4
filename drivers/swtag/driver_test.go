@@ -18,8 +18,9 @@
 package swtag
 
 import (
-	"github.com/hsanjuan/go-nfctype4/apdu"
 	"testing"
+
+	"github.com/hsanjuan/go-nfctype4/apdu"
 )
 
 type MockTag struct{}
@@ -29,9 +30,9 @@ func (t *MockTag) Command(capdu *apdu.CAPDU) *apdu.RAPDU {
 }
 
 func TestDriver(t *testing.T) {
-	d := Driver{
-		Tag: new(MockTag),
-	}
+	d := new(Driver)
+	d.String()
+	d.Tag = new(MockTag)
 	d.String()
 	d.Initialize()
 	d.String()
