@@ -23,9 +23,9 @@ import (
 	//	"fmt"
 	"bytes"
 	"encoding/binary"
+	"errors"
 
 	"github.com/hsanjuan/go-ndef"
-	"github.com/hsanjuan/go-nfctype4"
 	"github.com/hsanjuan/go-nfctype4/apdu"
 	"github.com/hsanjuan/go-nfctype4/capabilitycontainer"
 	"github.com/hsanjuan/go-nfctype4/helpers"
@@ -33,8 +33,6 @@ import (
 
 // BUG(hector): Tag is not super-strict with the error responses
 // in case of unexpected Commands.
-
-// BUG(hector): Update operations are not implemented.
 
 // The Default ID of the NDEF File for the tags.
 const defaultNDEFFileID = 0xE104
@@ -45,34 +43,78 @@ const (
 	NFCForumMinorVersion = 0
 )
 
+// NDEFAPPLICATION is the name for the NDEF Application.
+const NDEFAPPLICATION = uint64(0xD2760000850101)
+
 // Tag implements a static NFC Type 4 Tags which holds a NDEFMessage.
 //
 // It is static because the message that is returned is always the same
 // regardless of how many times it is Read.
 //
-// Since the static Tag implements the `nfctype4.Tag` interface, this
+// Since the static Tag implements the `tags.Tag` interface, this
 // tag can be used with the `nfctype4/drivers/swtag`. Please check the `swtag`
 // module documentation for more information on the different uses.
 type Tag struct {
-	// The NDEF Message held in this Tag, which can be Read by an
-	// NFC Type 4 compliant device
-	Message *ndef.Message
 	// The fileID for it (optional)
 	FileID uint16
 	// what has been selected
 	selectedFileID uint16
+	// A shadow buffer for updates
+	file []byte
+}
+
+// Initialize sets this Tag in Initialized state.
+// This means that the tag is empty and the length of the NDEF File
+// is set to 0.
+func (tag *Tag) Initialize() {
+	tag.file = []byte{0x00, 0x00}
+}
+
+// SetMessage programs the NDEF message for this tag.
+// It returns an error if the m.Marshal() does (which
+// would indicate and invalid message).
+func (tag *Tag) SetMessage(m *ndef.Message) error {
+	mBytes, err := m.Marshal()
+	if err != nil {
+		return err
+	}
+	nlen := len(mBytes)
+	if nlen > 0xFFFE { // 0xFFFF is RFU accoring to specs
+		return errors.New("Tag.SetMessage: message too long")
+	}
+
+	// Write the NDEF File
+	var buf bytes.Buffer
+	nlenBytes := helpers.Uint16ToBytes(uint16(nlen))
+	buf.Write(nlenBytes[:])
+	buf.Write(mBytes)
+	tag.file = buf.Bytes()
+	return nil
+}
+
+// GetMessage allows to retrieve the NDEF message stored
+// in the tag.
+// It returns nil when there is nothing stored.
+func (tag *Tag) GetMessage() *ndef.Message {
+	if len(tag.file) < 2 {
+		return nil
+	}
+	nlen := helpers.BytesToUint16([2]byte{tag.file[0], tag.file[1]})
+	if nlen == 0 {
+		return nil
+	}
+	mBytes := tag.file[2:]
+	msg := new(ndef.Message)
+	// if this fails, we will return nil too
+	msg.Unmarshal(mBytes)
+	return msg
 }
 
 // Command lets the Software tag receive Commands (CAPDUs) and
 // provide respones (RAPDUs) according to each command.
 // It is the heart of the behaviour of a NFC Type 4 Tag.
 func (tag *Tag) Command(capdu *apdu.CAPDU) *apdu.RAPDU {
-	if tag.Message == nil {
-		return apdu.NewRAPDU(apdu.RAPDUInactiveState)
-	}
-	// Test message can be serialized
-	_, err := tag.Message.Marshal()
-	if err != nil {
+	if len(tag.file) < 2 {
 		return apdu.NewRAPDU(apdu.RAPDUInactiveState)
 	}
 
@@ -99,7 +141,7 @@ func (tag *Tag) doSelect(capdu *apdu.CAPDU) *apdu.RAPDU {
 		data8 := make([]byte, 8)
 		copy(data8[1:], capdu.Data)
 		dataVal := binary.BigEndian.Uint64(data8)
-		if dataVal == nfctype4.NDEFAPPLICATION {
+		if dataVal == NDEFAPPLICATION {
 			// Selecting NDEF Application. Yes OK!
 			return apdu.NewRAPDU(apdu.RAPDUCommandCompleted)
 		}
@@ -146,16 +188,13 @@ func (tag *Tag) doRead(capdu *apdu.CAPDU) *apdu.RAPDU {
 			fileID = defaultNDEFFileID
 		}
 
-		// How long is our message?
-		mBytes, _ := tag.Message.Marshal()
-
 		// Now we can create the ControlTLV
 		tlv := &capabilitycontainer.NDEFFileControlTLV{
 			T:      0x04,
 			L:      0x06,
 			FileID: fileID,
 			// 2 NDEF Len bytes
-			MaximumFileSize:         uint16(len(mBytes)) + 2,
+			MaximumFileSize:         0xFFFE,
 			FileReadAccessCondition: 0x00,
 			// FIXME: Make this configurable
 			FileWriteAccessCondition: 0x00,
@@ -166,27 +205,28 @@ func (tag *Tag) doRead(capdu *apdu.CAPDU) *apdu.RAPDU {
 			CCLEN: 15,
 			MappingVersion: byte(NFCForumMajorVersion)<<4 |
 				byte(NFCForumMinorVersion),
-			MLe:                255,
-			MLc:                255,
+			MLe:                0x00FF, // Force chunks for large
+			MLc:                0x00FF,
 			NDEFFileControlTLV: tlv,
 		}
 		rBytes, _ = cc.Marshal()
 
-	case defaultNDEFFileID, tag.FileID: //NDEF File
-		ndefBytes, _ := tag.Message.Marshal()
-		// FIXME: what about very long messages
-		ndefLen := helpers.Uint16ToBytes(uint16(len(ndefBytes)))
-		var buffer bytes.Buffer
-		buffer.Write(ndefLen[:])
-		buffer.Write(ndefBytes)
-		rBytes = buffer.Bytes()
+	case defaultNDEFFileID:
+		if tag.FileID != 0 && tag.FileID != defaultNDEFFileID {
+			// Then there is no file here
+			return apdu.NewRAPDU(apdu.RAPDUFileNotFound)
+		}
+		// Otherwise pretend we are reading the Default
+		fallthrough
+	case tag.FileID: // Read NDEF File
+		rBytes = tag.file
 	default:
 		return apdu.NewRAPDU(apdu.RAPDUFileNotFound)
 	}
 
 	// We have rBytes ready. Let's make sure the response
 	// adapts to the offset and Le provided in the CAPDU
-	offset := int(capdu.P2)
+	offset := int(helpers.BytesToUint16([2]byte{capdu.P1, capdu.P2}))
 	rLen := int(capdu.GetLe())
 	rBytesLen := len(rBytes)
 	if rLen+offset > rBytesLen {
@@ -197,7 +237,37 @@ func (tag *Tag) doRead(capdu *apdu.CAPDU) *apdu.RAPDU {
 	return rapdu
 }
 
-// Unimplemented
 func (tag *Tag) doUpdate(capdu *apdu.CAPDU) *apdu.RAPDU {
-	return apdu.NewRAPDU(apdu.RAPDUInactiveState)
+	// Read the selected file
+	if tag.selectedFileID == 0x00 {
+		return apdu.NewRAPDU(apdu.RAPDUFileNotFound)
+	}
+
+	// Rule out when it's the default but the FileID is set
+	// to something else
+	if tag.selectedFileID == defaultNDEFFileID &&
+		tag.FileID != 0 && tag.FileID != defaultNDEFFileID {
+		return apdu.NewRAPDU(apdu.RAPDUFileNotFound)
+	}
+
+	// Rule out the cases when it's not the Default, but also
+	// not the FileID
+	if tag.selectedFileID != tag.FileID &&
+		tag.selectedFileID != defaultNDEFFileID {
+		return apdu.NewRAPDU(apdu.RAPDUFileNotFound)
+	}
+
+	// We are writing the NDEF File
+	offset := int(helpers.BytesToUint16([2]byte{capdu.P1, capdu.P2}))
+	data := capdu.Data
+
+	newFileSize := offset + len(data)
+	if newFileSize > len(tag.file) {
+		// increase the size of the file
+		newFile := make([]byte, newFileSize)
+		copy(newFile, tag.file)
+		tag.file = newFile
+	}
+	copy(tag.file[offset:], data)
+	return apdu.NewRAPDU(apdu.RAPDUCommandCompleted)
 }

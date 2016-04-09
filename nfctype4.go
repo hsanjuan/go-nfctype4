@@ -15,8 +15,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-// BUG(hector): Update (write/erase) operations are not yet supported
-
 // Package nfctype4 is an implementation of the NFC Forum Type 4 Tag
 // Operation Specification.
 //

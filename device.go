@@ -20,6 +20,7 @@ package nfctype4
 import (
 	"bytes"
 	"errors"
+	"fmt"
 
 	"github.com/hsanjuan/go-ndef"
 	"github.com/hsanjuan/go-nfctype4/capabilitycontainer"
@@ -41,6 +42,16 @@ type Device struct {
 	commander    *Commander
 }
 
+// tagState is used to store the relevant information obtained from a
+// NDEF Detection Procedure
+type tagState struct {
+	NLEN               uint16
+	MaxReadBinaryLen   uint16
+	MaxUpdateBinaryLen uint16
+	MaxNDEFLen         uint16
+	ReadOnly           bool
+}
+
 // Setup makes configures this device to use the provided
 // command driver to perform operations with the Tag
 func (dev *Device) Setup(cmdDriver CommandDriver) {
@@ -54,17 +65,14 @@ func (dev *Device) Setup(cmdDriver CommandDriver) {
 // The CommandDriver provided with Setup is initialized and
 // closed at the end of the operation.
 //
-// The specification is followed very closely, and all the necessary
-// steps are performed: NDEF application select, Capability
-// Container select, Capability Container read, NDEF File Select, NDEF File
-// length detection and NDEF File read.
+// Read performs the NDEF Detect Procedure and, if successful,
+// performs a read operation on the NDEF File.
 //
 // It returns the NDEFMessage stored in the tag, or an error
 // if something went wrong.
 func (dev *Device) Read() (*ndef.Message, error) {
-	if dev.commander == nil {
-		return nil, errors.New("The Device has not been Setup. " +
-			"Please run Device.Setup() first")
+	if err := dev.checkReady(); err != nil {
+		return nil, err
 	}
 
 	// Initialize driver and make sure we close it at the end
@@ -73,6 +81,144 @@ func (dev *Device) Read() (*ndef.Message, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	detectState, err := dev.ndefDetectProcedure()
+	if err != nil {
+		return nil, err
+	}
+
+	if detectState.NLEN == 0 {
+		return nil, errors.New(
+			"Device.Read: no NDEF Message detected.")
+	}
+
+	// Message detected
+	// readLen represents what is the maximum amount of data we are going
+	// to read from the Tag in one go.
+	// It needs to be the minimum between maxReadBinaryLen and nlen
+	readLen := detectState.MaxReadBinaryLen
+	nlen := detectState.NLEN
+	if nlen < readLen {
+		readLen = nlen
+	}
+	// Read messages doing as many ReadBinary calls as necessary
+	totalRead := uint16(0)
+	var buffer bytes.Buffer // to hold what we are reading
+	for totalRead < nlen {
+		if nlen-totalRead < readLen { //last round
+			readLen = nlen - totalRead
+		}
+		// Always offset the nlen bytes (2)
+		chunk, err := dev.commander.ReadBinary(2+totalRead, readLen)
+		if err != nil {
+			return nil, err
+		}
+		buffer.Write(chunk)
+		totalRead += readLen
+	}
+
+	ndefBytes := buffer.Bytes()
+
+	// We finally have the NDEF Message. Parse it.
+	ndefMessage := new(ndef.Message)
+	if _, err := ndefMessage.Unmarshal(ndefBytes); err != nil {
+		return nil, err
+	}
+
+	// Finally, return the parsed NDEF Message
+	return ndefMessage, nil
+}
+
+// Update performs an update operation on a NFC Type 4 tag.
+//
+// The CommandDriver provided with Setup is initialized and
+// closed at the end of the operation.
+//
+// The update operation starts by performing the NDEF
+// Detection Procedure and the writing the provided NDEF Message
+// to the NDEF File in the Tag, when the tag is not read-only.
+//
+// Note that update cannot be used to format a tag (clear the
+// NDEF Message). For that, use Format().
+//
+// Update returns an error when there is a problem in some of the
+// steps.
+func (dev *Device) Update(m *ndef.Message) error {
+	if err := dev.checkReady(); err != nil {
+		return err
+	}
+
+	// Initialize driver and make sure we close it at the end
+	err := dev.commander.Driver.Initialize()
+	defer dev.commander.Driver.Close()
+	if err != nil {
+		return err
+	}
+
+	detectState, err := dev.ndefDetectProcedure()
+	if err != nil {
+		return err
+	}
+
+	if detectState.ReadOnly {
+		return errors.New("Device.Update: the tag is read-only")
+	}
+
+	messageBytes, err := m.Marshal()
+	if err != nil {
+		return err
+	}
+
+	if len(messageBytes) > int(detectState.MaxNDEFLen-2) {
+		return fmt.Errorf("Message is too large. Max size is %d",
+			detectState.MaxNDEFLen-2)
+	}
+
+	// Per above, this can be done without risking overflows
+	msgLen := uint16(len(messageBytes))
+
+	// The number of bytes to write will be the maximum or,
+	// if that's more than the message, just the message size
+	writeLen := detectState.MaxUpdateBinaryLen
+	if msgLen < writeLen {
+		writeLen = msgLen
+	}
+
+	// If the msgLen + 2 fits inside the MaxUpdateBinaryLen
+	// then we could do this in a single UpdateBinary command.
+	// For the moment we do the slow way which works always.
+	// Write 0000h in the NLEN field first
+	err = dev.commander.UpdateBinary([]byte{0x00, 0x00}, 0)
+	if err != nil {
+		return err
+	}
+
+	// Write the message doing as many UpdateBinary calls as necessary
+	totalWrite := uint16(0)
+	for totalWrite < msgLen {
+		if msgLen-totalWrite < writeLen { //last round
+			writeLen = msgLen - totalWrite
+		}
+		err = dev.commander.UpdateBinary(
+			messageBytes[totalWrite:totalWrite+writeLen],
+			totalWrite+2) // Always offset the 2 NLEN bytes
+		if err != nil {
+			return err
+		}
+		totalWrite += writeLen
+	}
+	// Finally write NLEN
+	msgLenBytes := helpers.Uint16ToBytes(msgLen)
+	err = dev.commander.UpdateBinary(msgLenBytes[:], 0)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (dev *Device) ndefDetectProcedure() (*tagState, error) {
+	state := new(tagState)
 	// Select NDEF Application
 	if err := dev.commander.NDEFApplicationSelect(); err != nil {
 		return nil, err
@@ -97,8 +243,13 @@ func (dev *Device) Read() (*ndef.Message, error) {
 	fcTlv := cc.NDEFFileControlTLV
 	if !(*capabilitycontainer.ControlTLV)(fcTlv).IsFileReadable() {
 		return nil, errors.New(
-			"Device.Read: NDEF File is marked as not readable")
+			"Device.Read: NDEF File is marked as not readable.")
 	}
+
+	state.MaxReadBinaryLen = cc.MLe
+	state.MaxUpdateBinaryLen = cc.MLc
+	state.MaxNDEFLen = fcTlv.MaximumFileSize
+	state.ReadOnly = (*capabilitycontainer.ControlTLV)(fcTlv).IsFileReadOnly()
 
 	// Select the NDEF File
 	if err := dev.commander.Select(fcTlv.FileID); err != nil {
@@ -106,56 +257,23 @@ func (dev *Device) Read() (*ndef.Message, error) {
 	}
 
 	// Detect NDEF Message procedure 5.4.1
-	maxReadBinaryLen := cc.MLe
-	maxNdefLen := fcTlv.MaximumFileSize
 	nlenBytes, err := dev.commander.ReadBinary(0, 2)
 	if err != nil {
 		return nil, err
 	}
 	nlen := helpers.BytesToUint16([2]byte{nlenBytes[0], nlenBytes[1]})
-	if nlen == 0 {
-		return nil, errors.New(
-			"Device.Read: no NDEF Message to read Detected")
-	} else if nlen > maxNdefLen-2 {
+	if nlen > state.MaxNDEFLen-2 {
 		return nil, errors.New(
 			"Device.Read: Device is not in a valid state")
 	}
-
-	// Message detected
-	// Read length needs to be the minimum between maxReadBinaryLen and nlen
-	readLen := maxReadBinaryLen
-	if nlen < readLen {
-		readLen = nlen
-	}
-	// Read messages doing as many ReadBinary calls as necessary
-	totalRead := uint16(0)
-	var buffer bytes.Buffer
-	for totalRead < nlen {
-		if nlen-totalRead < readLen { //last round
-			readLen = nlen - totalRead
-		}
-		// Always offset the nlen bytes (2)
-		chunk, err := dev.commander.ReadBinary(2+totalRead, readLen)
-		if err != nil {
-			return nil, err
-		}
-		if _, err = buffer.Write(chunk); err != nil {
-			return nil, err
-		}
-		totalRead += readLen
-	}
-
-	ndefBytes := buffer.Bytes()
-
-	ndefMessage := new(ndef.Message)
-	if _, err := ndefMessage.Unmarshal(ndefBytes); err != nil {
-		return nil, err
-	}
-
-	// Finally, return the parsed NDEF Message
-	return ndefMessage, nil
+	state.NLEN = nlen
+	return state, nil
 }
 
-func (dev *Device) Update(m *ndef.Message) error {
+func (dev *Device) checkReady() error {
+	if dev.commander == nil {
+		return errors.New("The Device has not been setup. " +
+			"Please run Device.Setup(CommandDriver) first")
+	}
 	return nil
 }

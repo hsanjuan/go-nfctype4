@@ -49,6 +49,7 @@ func TestRAPDUNew(t *testing.T) {
 	}
 	for _, c := range testcases {
 		rapdu := NewRAPDU(c)
+		t.Log(rapdu)
 		if rapdu == nil {
 			t.Fail()
 		}

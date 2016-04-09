@@ -15,7 +15,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
-package nfctype4
+// Package tags provides a Tag interface to be implemented
+// by software tags.
+package tags
 
 import (
 	"github.com/hsanjuan/go-nfctype4/apdu"

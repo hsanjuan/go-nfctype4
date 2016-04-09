@@ -382,6 +382,21 @@ func NewReadBinaryAPDU(offset uint16, length uint16) *CAPDU {
 	return cApdu
 }
 
+// NewUpdateBinaryAPDU returns a new CAPDU to perform a binary
+// update operation with the provided data and offset.
+func NewUpdateBinaryAPDU(data []byte, offset uint16) *CAPDU {
+	offsetBytes := helpers.Uint16ToBytes(offset)
+	cApdu := &CAPDU{
+		CLA:  byte(0x00),
+		INS:  byte(0xD6),
+		P1:   offsetBytes[0],
+		P2:   offsetBytes[1],
+		Data: data,
+	}
+	cApdu.SetLc(uint16(len(data)))
+	return cApdu
+}
+
 // NewSelectAPDU returns a new CAPDU to perform a select
 // operation by ID with the provided fileID
 func NewSelectAPDU(fileID uint16) *CAPDU {
