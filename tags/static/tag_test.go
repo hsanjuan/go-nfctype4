@@ -57,5 +57,5 @@ func ExampleTag() {
 		fmt.Println(receivedMessage)
 	}
 	// Output:
-	// urn:nfc:wkt:T:This is a text payload for this message
+	// This is a text payload for this message
 }
