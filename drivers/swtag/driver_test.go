@@ -30,9 +30,9 @@ func (t *MockTag) Command(capdu *apdu.CAPDU) *apdu.RAPDU {
 }
 
 func TestDriver(t *testing.T) {
-	d := Driver{
-		Tag: new(MockTag),
-	}
+	d := new(Driver)
+	d.String()
+	d.Tag = new(MockTag)
 	d.String()
 	d.Initialize()
 	d.String()
