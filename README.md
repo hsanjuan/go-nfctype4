@@ -25,10 +25,11 @@ Packages
 
 `go-nfctype4` and its subpackages offer access to the implementation of all the entities described in the NFC Forum Type 4 Tag specification. These are the links to the reference documentation of the most relevant packages:
 
-  * https://godoc.org/github.com/hsanjuan/go-nfctype4 : Provides the `Device`, `CommandDriver`, `Commander` and `Tag` types. They are the main entry point to interact with NFC tags.
+  * https://godoc.org/github.com/hsanjuan/go-nfctype4 : Provides the `Device`, `CommandDriver` and `Commander`. They are the main entry point to interact with NFC tags.
   * https://godoc.org/github.com/hsanjuan/go-nfctype4/apdu : Provides support for creating and serializing Command APDUs and Response APDUs.
   * https://godoc.org/github.com/hsanjuan/go-nfctype4/capabilitycontainer : Provides support for creating and serializing Capability Containers and TLV Blocks.
   * https://godoc.org/github.com/hsanjuan/go-nfctype4/drivers/libnfc : Provides libnfc support to read and write to hardware tags with an NFC reader.
   * https://godoc.org/github.com/hsanjuan/go-nfctype4/drivers/swtag : Provides a binary interface for a software `Tag`.
+  * https://godoc.org/github.com/hsanjuan/go-nfctype4/tags : Provides the `Tag` interface, on which software tags that use this library should be based-on.
   * https://godoc.org/github.com/hsanjuan/go-nfctype4/tags/static : Provides the implementation of a software-based static NFC Type 4 tag.
 
