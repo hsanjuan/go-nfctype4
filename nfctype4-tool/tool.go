@@ -40,7 +40,11 @@ func init() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr,
 			"Usage: go-nfctype4-tool "+
-				"[options] <read|write> [payload]\n")
+				"[options] <read|write|format> [payload]\n")
+		fmt.Fprintf(os.Stderr, "Operations:\n")
+		fmt.Fprintf(os.Stderr, " - read: read the contents from a tag.\n")
+		fmt.Fprintf(os.Stderr, " - write: update a tag with the given payload.\n")
+		fmt.Fprintf(os.Stderr, " - format: erase the contents of a tag.\n")
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		flag.PrintDefaults()
 		fmt.Fprintln(os.Stderr)
@@ -57,6 +61,8 @@ func main() {
 		doRead()
 	case "write":
 		doWrite()
+	case "format":
+		doFormat()
 	case "":
 		fmt.Fprintf(os.Stderr, "Command argument is missing.\n\n")
 		flag.Usage()
@@ -113,5 +119,16 @@ func doWrite() {
 		os.Exit(1)
 	} else {
 		fmt.Println("Updated successful.")
+	}
+}
+
+func doFormat() {
+	device := makeDevice()
+	err := device.Format()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	} else {
+		fmt.Println("Format operation successful.")
 	}
 }

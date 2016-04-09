@@ -270,3 +270,40 @@ func TestUpdate(t *testing.T) {
 		t.Log("The expected error was:", err)
 	}
 }
+
+func TestFormat(t *testing.T) {
+	// We will use the software tags
+
+	tag := new(static.Tag)
+	tag.Initialize()
+
+	// First assume our tag has a simple message
+	simpleMsg := &ndef.Message{
+		TNF:     ndef.NFCForumWellKnownType,
+		Type:    []byte("T"),
+		Payload: []byte("This is a text message"),
+	}
+	tag.SetMessage(simpleMsg)
+
+	driver := &swtag.Driver{
+		Tag: tag,
+	}
+	device := new(Device)
+	device.Setup(driver)
+
+	// Format the tag
+	err := device.Format()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	// Try to read
+	_, err = device.Read()
+	if err == nil {
+		t.Error("Reading from an empty tag should have failed")
+	} else {
+		if err.Error() != "Device.Read: no NDEF Message detected." {
+			t.Error("Unexpected error happened: ", err.Error())
+		}
+	}
+}

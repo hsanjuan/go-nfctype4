@@ -217,6 +217,40 @@ func (dev *Device) Update(m *ndef.Message) error {
 	return nil
 }
 
+// Format performs an update operation which erases a tag.
+// It does this by writing to the first two bytes of the NDEF File
+// and setting their value to 0 (zero-length for the file).
+//
+// Format returns an error when a problem happens.
+func (dev *Device) Format() error {
+	if err := dev.checkReady(); err != nil {
+		return err
+	}
+
+	// Initialize driver and make sure we close it at the end
+	err := dev.commander.Driver.Initialize()
+	defer dev.commander.Driver.Close()
+	if err != nil {
+		return err
+	}
+
+	detectState, err := dev.ndefDetectProcedure()
+	if err != nil {
+		return err
+	}
+
+	if detectState.ReadOnly {
+		return errors.New("Device.Update: the tag is read-only")
+	}
+
+	err = dev.commander.UpdateBinary([]byte{0, 0}, 0)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (dev *Device) ndefDetectProcedure() (*tagState, error) {
 	state := new(tagState)
 	// Select NDEF Application
