@@ -209,8 +209,7 @@ func TestRead_badExamples(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	// We will use the software tags
 
-	tag := new(static.Tag)
-	tag.Initialize() // empty state
+	tag := static.New()
 
 	driver := &swtag.Driver{
 		Tag: tag,
@@ -274,8 +273,7 @@ func TestUpdate(t *testing.T) {
 func TestFormat(t *testing.T) {
 	// We will use the software tags
 
-	tag := new(static.Tag)
-	tag.Initialize()
+	tag := static.New()
 
 	// First assume our tag has a simple message
 	simpleMsg := &ndef.Message{
