@@ -91,13 +91,10 @@ func ExampleTag_write() {
 		return
 	}
 
-	// And double-check it has been updated by reading it again.
-	receivedMessage, err := device.Read()
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println(receivedMessage)
-	}
+	// Finally let's peek at the message stored in the tag
+	tagMessage := tag.GetMessage()
+	fmt.Println(tagMessage)
+
 	// Output:
 	// This is a new message
 }
