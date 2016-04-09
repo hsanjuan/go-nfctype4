@@ -34,8 +34,13 @@ import (
 // BUG(hector): Tag is not super-strict with the error responses
 // in case of unexpected Commands.
 
-// The Default ID of the NDEF File for the tags.
-const defaultNDEFFileID = 0xE104
+// NDEFFileAddress Address in which the NDEF File is stored.
+// It is initialized to a default of 0x8888.
+//
+// The valid ranges are 0x0001-E101,0xE104-3EFF, 0x4000-FFFE.
+// Values 0x0000, 0xE102, 0xE103, 0x3F00, 0x3FFF are reserved.
+// 0xFFFF is RFU.
+const NDEFFileAddress = uint16(0x8888)
 
 // Version of the specification implemented by this tag
 const (
@@ -48,26 +53,58 @@ const NDEFAPPLICATION = uint64(0xD2760000850101)
 
 // Tag implements a static NFC Type 4 Tags which holds a NDEFMessage.
 //
-// It is static because the message that is returned is always the same
+// It called static because the message that is returned is always the same
 // regardless of how many times it is Read.
 //
 // Since the static Tag implements the `tags.Tag` interface, this
 // tag can be used with the `nfctype4/drivers/swtag`. Please check the `swtag`
 // module documentation for more information on the different uses.
+//
+// Please use static.New() to create tags, or remember to do a Tag.Initialize()
+// as otherwise tags will refuse to work.
 type Tag struct {
-	// The fileID for it (optional)
-	FileID uint16
 	// what has been selected
 	selectedFileID uint16
 	// A shadow buffer for updates
-	file []byte
+	memory map[uint16][]byte
 }
 
-// Initialize sets this Tag in Initialized state.
-// This means that the tag is empty and the length of the NDEF File
-// is set to 0.
+// New returns a new *Tag in Initialized state (empty)
+func New() *Tag {
+	t := new(Tag)
+	t.Initialize()
+	return t
+}
+
+// Initialize resets a Tag to an initialized state (empty)
+// It will drop the memory contents if they previously existed
+// and de-select any files.
 func (tag *Tag) Initialize() {
-	tag.file = []byte{0x00, 0x00}
+	tag.selectedFileID = 0
+	tag.memory = make(map[uint16][]byte)
+
+	// Set the capability container
+	cc := &capabilitycontainer.CapabilityContainer{
+		CCLEN: 15,
+		MappingVersion: byte(NFCForumMajorVersion)<<4 |
+			byte(NFCForumMinorVersion),
+		MLe: 0x00FF, // We could put more... or less
+		MLc: 0x00FF,
+		NDEFFileControlTLV: &capabilitycontainer.NDEFFileControlTLV{
+			T:                        0x04,
+			L:                        0x06,
+			FileID:                   NDEFFileAddress,
+			MaximumFileSize:          0xFFFE,
+			FileReadAccessCondition:  0x00,
+			FileWriteAccessCondition: 0x00, // FIXME: Make configurable
+
+		},
+	}
+	ccBytes, _ := cc.Marshal()
+	tag.memory[capabilitycontainer.CCID] = ccBytes
+
+	// Set an empty NDEF file
+	tag.memory[NDEFFileAddress] = []byte{0, 0} // NLEN to 0
 }
 
 // SetMessage programs the NDEF message for this tag.
@@ -88,7 +125,7 @@ func (tag *Tag) SetMessage(m *ndef.Message) error {
 	nlenBytes := helpers.Uint16ToBytes(uint16(nlen))
 	buf.Write(nlenBytes[:])
 	buf.Write(mBytes)
-	tag.file = buf.Bytes()
+	tag.memory[NDEFFileAddress] = buf.Bytes()
 	return nil
 }
 
@@ -96,14 +133,17 @@ func (tag *Tag) SetMessage(m *ndef.Message) error {
 // in the tag.
 // It returns nil when there is nothing stored.
 func (tag *Tag) GetMessage() *ndef.Message {
-	if len(tag.file) < 2 {
+	file := tag.memory[NDEFFileAddress]
+	if len(file) < 2 {
 		return nil
 	}
-	nlen := helpers.BytesToUint16([2]byte{tag.file[0], tag.file[1]})
+
+	nlen := helpers.BytesToUint16([2]byte{file[0], file[1]})
 	if nlen == 0 {
 		return nil
 	}
-	mBytes := tag.file[2:]
+
+	mBytes := file[2:]
 	msg := new(ndef.Message)
 	// if this fails, we will return nil too
 	msg.Unmarshal(mBytes)
@@ -114,7 +154,7 @@ func (tag *Tag) GetMessage() *ndef.Message {
 // provide respones (RAPDUs) according to each command.
 // It is the heart of the behaviour of a NFC Type 4 Tag.
 func (tag *Tag) Command(capdu *apdu.CAPDU) *apdu.RAPDU {
-	if len(tag.file) < 2 {
+	if tag.memory == nil {
 		return apdu.NewRAPDU(apdu.RAPDUInactiveState)
 	}
 
@@ -156,71 +196,25 @@ func (tag *Tag) doSelect(capdu *apdu.CAPDU) *apdu.RAPDU {
 			}
 		}
 		// Selecting by id
-		fID := helpers.BytesToUint16([2]byte{
+		addr := helpers.BytesToUint16([2]byte{
 			capdu.Data[0],
 			capdu.Data[1]})
-		// Cover the cases where we select a valid file
-		if fID == 0xE103 || //CC
-			(tag.FileID == 0x00 && fID == defaultNDEFFileID) ||
-			(tag.FileID != 0x00 && tag.FileID == fID) {
-			tag.selectedFileID = fID
-			return apdu.NewRAPDU(apdu.RAPDUCommandCompleted)
+		_, ok := tag.memory[addr]
+		if !ok {
+			return apdu.NewRAPDU(apdu.RAPDUFileNotFound)
 		}
-		fallthrough // File not found
+
+		// We have something in that address
+		tag.selectedFileID = addr
+		return apdu.NewRAPDU(apdu.RAPDUCommandCompleted)
 	default:
 		return apdu.NewRAPDU(apdu.RAPDUFileNotFound)
 	}
 }
 
 func (tag *Tag) doRead(capdu *apdu.CAPDU) *apdu.RAPDU {
-	// Read the selected file
-	if tag.selectedFileID == 0x00 {
-		return apdu.NewRAPDU(apdu.RAPDUFileNotFound)
-	}
-
-	var rBytes []byte
-
-	switch tag.selectedFileID {
-	case capabilitycontainer.CCID: // Capability Container
-		// Figure out the File ID
-		fileID := tag.FileID
-		if fileID == 0 {
-			fileID = defaultNDEFFileID
-		}
-
-		// Now we can create the ControlTLV
-		tlv := &capabilitycontainer.NDEFFileControlTLV{
-			T:      0x04,
-			L:      0x06,
-			FileID: fileID,
-			// 2 NDEF Len bytes
-			MaximumFileSize:         0xFFFE,
-			FileReadAccessCondition: 0x00,
-			// FIXME: Make this configurable
-			FileWriteAccessCondition: 0x00,
-		}
-
-		// Attach it to a CC
-		cc := &capabilitycontainer.CapabilityContainer{
-			CCLEN: 15,
-			MappingVersion: byte(NFCForumMajorVersion)<<4 |
-				byte(NFCForumMinorVersion),
-			MLe:                0x00FF, // Force chunks for large
-			MLc:                0x00FF,
-			NDEFFileControlTLV: tlv,
-		}
-		rBytes, _ = cc.Marshal()
-
-	case defaultNDEFFileID:
-		if tag.FileID != 0 && tag.FileID != defaultNDEFFileID {
-			// Then there is no file here
-			return apdu.NewRAPDU(apdu.RAPDUFileNotFound)
-		}
-		// Otherwise pretend we are reading the Default
-		fallthrough
-	case tag.FileID: // Read NDEF File
-		rBytes = tag.file
-	default:
+	rBytes, ok := tag.memory[tag.selectedFileID]
+	if !ok {
 		return apdu.NewRAPDU(apdu.RAPDUFileNotFound)
 	}
 
@@ -238,36 +232,26 @@ func (tag *Tag) doRead(capdu *apdu.CAPDU) *apdu.RAPDU {
 }
 
 func (tag *Tag) doUpdate(capdu *apdu.CAPDU) *apdu.RAPDU {
-	// Read the selected file
-	if tag.selectedFileID == 0x00 {
+	if tag.selectedFileID == capabilitycontainer.CCID {
+		// No, you cannot write the CC
+		apdu.NewRAPDU(apdu.RAPDUCommandNotAllowed)
+	}
+	_, ok := tag.memory[tag.selectedFileID]
+	if !ok {
 		return apdu.NewRAPDU(apdu.RAPDUFileNotFound)
 	}
 
-	// Rule out when it's the default but the FileID is set
-	// to something else
-	if tag.selectedFileID == defaultNDEFFileID &&
-		tag.FileID != 0 && tag.FileID != defaultNDEFFileID {
-		return apdu.NewRAPDU(apdu.RAPDUFileNotFound)
-	}
-
-	// Rule out the cases when it's not the Default, but also
-	// not the FileID
-	if tag.selectedFileID != tag.FileID &&
-		tag.selectedFileID != defaultNDEFFileID {
-		return apdu.NewRAPDU(apdu.RAPDUFileNotFound)
-	}
-
-	// We are writing the NDEF File
 	offset := int(helpers.BytesToUint16([2]byte{capdu.P1, capdu.P2}))
 	data := capdu.Data
 
-	newFileSize := offset + len(data)
-	if newFileSize > len(tag.file) {
+	file := tag.memory[tag.selectedFileID]
+	newFileLen := offset + len(data)
+	if newFileLen > len(file) {
 		// increase the size of the file
-		newFile := make([]byte, newFileSize)
-		copy(newFile, tag.file)
-		tag.file = newFile
+		newFile := make([]byte, newFileLen)
+		copy(newFile, file)
+		tag.memory[tag.selectedFileID] = newFile
 	}
-	copy(tag.file[offset:], data)
+	copy(tag.memory[tag.selectedFileID][offset:], data)
 	return apdu.NewRAPDU(apdu.RAPDUCommandCompleted)
 }

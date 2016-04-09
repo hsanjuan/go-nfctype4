@@ -34,7 +34,7 @@ func ExampleTag_read() {
 		Payload: []byte("This is a text payload for this message"),
 	}
 	// Store this message in a static tag
-	tag := new(Tag)
+	tag := New()
 	err := tag.SetMessage(ndefMessage)
 	if err != nil {
 		fmt.Println(err)
@@ -64,9 +64,7 @@ func ExampleTag_read() {
 
 func ExampleTag_write() {
 	// Store this message in a static tag
-	tag := new(Tag)
-	// Sets the static tag in Initialized state (empty)
-	tag.Initialize()
+	tag := New()
 
 	// To read/write our tag we need a nfctype4.Device configured
 	// with the swtag driver. The driver is connected to
