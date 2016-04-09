@@ -16,7 +16,7 @@ go-nfctype4-tool
 
 `go-nfctype4-tool` is a command-line tool to read and write NFC Type 4 tags. It can be installed with:
 
-`go install github.com/hsanjuan/go-nfctype4/go-nfctype4-tool`.
+`go install github.com/hsanjuan/go-nfctype4/go-nfctype4-tool`
 
 You can then run `go-nfctype4-tool -h` for more information.
 
