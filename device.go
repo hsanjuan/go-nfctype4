@@ -53,7 +53,7 @@ type tagState struct {
 }
 
 // Setup makes configures this device to use the provided
-// command driver to perform operations with the Tag
+// command driver to perform operations on the tags.
 func (dev *Device) Setup(cmdDriver CommandDriver) {
 	dev.commander = &Commander{
 		Driver: cmdDriver,
