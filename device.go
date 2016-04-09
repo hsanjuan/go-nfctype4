@@ -155,3 +155,7 @@ func (dev *Device) Read() (*ndef.Message, error) {
 	// Finally, return the parsed NDEF Message
 	return ndefMessage, nil
 }
+
+func (dev *Device) Update(m *ndef.Message) error {
+	return nil
+}
