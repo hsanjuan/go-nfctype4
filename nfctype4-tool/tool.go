@@ -15,6 +15,10 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ***/
 
+// Package main provides a simple tool to read and write nfctype4 tags
+//
+// The read output depends on the ndef.Message.String().
+// The write input is plain text and is stored in a plain text NDEF Message
 package main
 
 import (
@@ -27,6 +31,7 @@ import (
 	"github.com/hsanjuan/go-nfctype4/drivers/libnfc"
 )
 
+// Command line flags
 var (
 	driverFlag string
 )

@@ -11,14 +11,14 @@ It provides a `Device` type which allows to interact with NFC Devices (like read
 
 It also allows to easily implement software-based NFC Type 4 compliant tags, which can be easily used to provide hardware NFC Readers in target-mode with the necessary functionality to adjust to the specification and act like real Type 4 Tags.
 
-go-nfctype4-tool
-----------------
+nfctype4-tool
+-------------
 
-`go-nfctype4-tool` is a command-line tool to read and write NFC Type 4 tags. It can be installed with:
+`nfctype4-tool` is a command-line tool to read and write NFC Type 4 tags. It can be installed with:
 
-`go install github.com/hsanjuan/go-nfctype4/go-nfctype4-tool`
+`go install github.com/hsanjuan/go-nfctype4/nfctype4-tool`
 
-You can then run `go-nfctype4-tool -h` for more information.
+You can then run `nfctype4-tool -h` for more information.
 
 Packages
 --------
