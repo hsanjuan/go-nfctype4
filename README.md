@@ -14,7 +14,9 @@ It also allows to easily implement software-based NFC Type 4 compliant tags, whi
 go-nfctype4-tool
 ----------------
 
-`go-nfctype4-tool` is a command-line tool to read and write NFC Type 4 tags. It can be installed with `go get github.com/hsanjuan/go-nfctype4/go-nfctype4-tool`.
+`go-nfctype4-tool` is a command-line tool to read and write NFC Type 4 tags. It can be installed with:
+
+`go install github.com/hsanjuan/go-nfctype4/go-nfctype4-tool`.
 
 You can then run `go-nfctype4-tool -h` for more information.
 
@@ -24,7 +26,7 @@ Packages
 `go-nfctype4` and its subpackages offer access to the implementation of all the entities described in the NFC Forum Type 4 Tag specification. These are the links to the reference documentation of the most relevant packages:
 
   * https://godoc.org/github.com/hsanjuan/go-nfctype4 : Provides the `Device`, `CommandDriver`, `Commander` and `Tag` types. They are the main entry point to interact with NFC tags.
-  * https://godoc.org/github.com/hsanjuan/go-nfctype4/apdu : Provides support for creating and serializing Command APDUs and Response APDUs
+  * https://godoc.org/github.com/hsanjuan/go-nfctype4/apdu : Provides support for creating and serializing Command APDUs and Response APDUs.
   * https://godoc.org/github.com/hsanjuan/go-nfctype4/capabilitycontainer : Provides support for creating and serializing Capability Containers and TLV Blocks.
   * https://godoc.org/github.com/hsanjuan/go-nfctype4/drivers/libnfc : Provides libnfc support to read and write to hardware tags with an NFC reader.
   * https://godoc.org/github.com/hsanjuan/go-nfctype4/drivers/swtag : Provides a binary interface for a software `Tag`.
