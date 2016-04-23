@@ -37,15 +37,15 @@ const (
 // field can be of 1 or 3 bytes. For the shorter version, the last 2 bytes of
 // the array are left unused.
 type TLV struct {
-	T byte    // Type of the TLV block. 00h-FEh. 00h-03h and 06h-FFh RFU.
-	L [3]byte // Size of the value field. Two last bytes may be unused
-	V []byte  // Value field
+	T byte   // Type of the TLV block. 00h-FEh. 00h-03h and 06h-FFh RFU.
+	L uint16 // Size of the value field.
+	V []byte // Value field
 }
 
 // Reset sets the fields of the TLV to their default values.
 func (tlv *TLV) Reset() {
 	tlv.T = 0
-	tlv.L = [3]byte{0, 0, 0}
+	tlv.L = 0
 	tlv.V = []byte{}
 }
 
@@ -61,26 +61,30 @@ func (tlv *TLV) Unmarshal(buf []byte) (rLen int, err error) {
 	tlv.T = helpers.GetByte(bytesBuf)
 	if bytesBuf.Len() == 0 {
 		// No length field. pff
-		tlv.L = [3]byte{0, 0, 0}
+		tlv.L = 0
 		tlv.V = []byte{}
 		return 1, nil
 	}
-	tlv.L[0] = helpers.GetByte(bytesBuf)
-	vLen := uint16(0)
+	l0 := helpers.GetByte(bytesBuf)
 
-	if tlv.L[0] == 0xFF { // 3 byte format
-		tlv.L[1] = helpers.GetByte(bytesBuf)
-		tlv.L[2] = helpers.GetByte(bytesBuf)
-		vLen = helpers.BytesToUint16([2]byte{tlv.L[1], tlv.L[2]})
+	if l0 == 0xFF { // 3 byte format
+		l1 := helpers.GetByte(bytesBuf)
+		l2 := helpers.GetByte(bytesBuf)
+		tlv.L = helpers.BytesToUint16([2]byte{l1, l2})
 	} else {
-		vLen = uint16(tlv.L[0])
+		tlv.L = uint16(l0)
 	}
-	tlv.V = helpers.GetBytes(bytesBuf, int(vLen))
+	tlv.V = helpers.GetBytes(bytesBuf, int(tlv.L))
 
 	rLen = len(buf) - bytesBuf.Len()
 	if err := tlv.check(); err != nil {
 		return rLen, err
 	}
+	if tlv.L < 0xFF && l0 == 0xFF {
+		return rLen, errors.New("TLV.Unmarshal: " +
+			"3-byte length used for a value < 0xFF")
+	}
+
 	return rLen, nil
 }
 
@@ -92,10 +96,12 @@ func (tlv *TLV) Marshal() ([]byte, error) {
 	}
 	var buffer bytes.Buffer
 	buffer.WriteByte(tlv.T)
-	if tlv.L[0] == 0xFF { // 3 byte format
-		buffer.Write(tlv.L[:])
+	if tlv.L >= 0xFF { // 3 byte format
+		buffer.WriteByte(0xFF)
+		lBytes := helpers.Uint16ToBytes(tlv.L)
+		buffer.Write(lBytes[:])
 	} else { // 1 byte only
-		buffer.WriteByte(tlv.L[0])
+		buffer.WriteByte(byte(tlv.L))
 	}
 	buffer.Write(tlv.V)
 	return buffer.Bytes(), nil
@@ -106,22 +112,24 @@ func (tlv *TLV) Marshal() ([]byte, error) {
 // correctly.
 // It returns an error when something does not look right.
 func (tlv *TLV) check() error {
-	var vLen uint16
-	if tlv.L[0] == 0xFF {
-		vLen = helpers.BytesToUint16([2]byte{tlv.L[1], tlv.L[2]})
-		if vLen < 0xFF {
-			return errors.New(
-				"TLV.check: 3-byte Length's last 2 bytes " +
-					"value should > 0xFF")
-		}
-		if vLen == 0xFFFF {
-			return errors.New("TLV.check: 3-byte Length's last " +
-				"2 bytes value 0xFFFF is RFU")
-		}
-	} else {
-		vLen = uint16(tlv.L[0])
-	}
-	if int(vLen) != len(tlv.V) {
+	// This cannot be checked anymore with L as uint16
+	// var vLen uint16
+	// if tlv.L[0] == 0xFF {
+	// 	vLen = helpers.BytesToUint16([2]byte{tlv.L[1], tlv.L[2]})
+	// 	if vLen < 0xFF {
+	// 		return errors.New(
+	// 			"TLV.check: 3-byte Length's last 2 bytes " +
+	// 				"value should > 0xFF")
+	// 	}
+	// 	if vLen == 0xFFFF {
+	// 		return errors.New("TLV.check: 3-byte Length's last " +
+	// 			"2 bytes value 0xFFFF is RFU")
+	// 	}
+	// } else {
+	// 	vLen = uint16(tlv.L[0])
+	// }
+
+	if int(tlv.L) != len(tlv.V) {
 		return errors.New(
 			"TLV.check: L[ength] does not match the V[alue] length")
 	}
@@ -166,7 +174,7 @@ func (cTLV *ControlTLV) Unmarshal(buf []byte) (rLen int, err error) {
 	}
 
 	cTLV.T = tlv.T
-	cTLV.L = tlv.L[0]
+	cTLV.L = byte(tlv.L)
 	cTLV.FileID = helpers.BytesToUint16([2]byte{tlv.V[0], tlv.V[1]})
 	cTLV.MaximumFileSize = helpers.BytesToUint16([2]byte{tlv.V[2], tlv.V[3]})
 	cTLV.FileReadAccessCondition = tlv.V[4]
@@ -191,7 +199,7 @@ func (cTLV *ControlTLV) Marshal() ([]byte, error) {
 	// Copy this to a regular TLV and leverage Marshal() from there
 	tlv := new(TLV)
 	tlv.T = cTLV.T
-	tlv.L[0] = cTLV.L
+	tlv.L = uint16(cTLV.L)
 	var v bytes.Buffer
 	fileID := helpers.Uint16ToBytes(cTLV.FileID)
 	v.Write(fileID[:])

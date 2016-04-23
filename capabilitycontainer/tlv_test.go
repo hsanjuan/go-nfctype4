@@ -66,10 +66,11 @@ func TestControlTLVMarshalErrors(t *testing.T) {
 
 func TestTLVUmarshal(t *testing.T) {
 	testcasesBad := map[string][]byte{
+		// We cannot test these
 		"bad_long_length":  []byte{0x04, 0xFF, 0x00, 0x01, 0xdd},
 		"bad_long_length2": []byte{0x04, 0xFF, 0x01, 0x01, 0xdd},
 		"bad_short_length": []byte{0x04, 0xFF, 0xdd},
-		"length_mismatch":  []byte{0x04, 0x05, 0xdd, 0xdd},
+		"length_mismatch":  []byte{0x04, 0x06, 0xdd, 0xdd, 0xdd},
 	}
 
 	for k, tlvB := range testcasesBad {
@@ -86,17 +87,9 @@ func TestTLVUmarshal(t *testing.T) {
 
 func TestTLVMarshal(t *testing.T) {
 	testcasesBad := map[string]*TLV{
-		"bad_long_length": &TLV{
-			T: 0x05,
-			L: [3]byte{0xFF, 0x00, 0x01},
-		},
-		"bad_long_length2": &TLV{
-			T: 0x05,
-			L: [3]byte{0xFF, 0xFF, 0xFF},
-		},
 		"length_mismatch": &TLV{
 			T: 0x05,
-			L: [3]byte{0x03},
+			L: 3,
 			V: []byte{0xdd},
 		},
 	}
