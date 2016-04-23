@@ -44,7 +44,7 @@ type CapabilityContainer struct {
 	MLe                uint16              // Maximum data read with ReadBinary. 000Fh-FFFFh
 	MLc                uint16              // Maximum data to write with UpdateBinary. 0001h-FFFFh
 	NDEFFileControlTLV *NDEFFileControlTLV // NDEF file information
-	TLVBlocks          []*TLV              // Optional TLVs
+	TLVBlocks          []*ControlTLV       // Optional TLVs
 }
 
 // Reset clears all the fields of the CapabilityContainer to their
@@ -65,47 +65,75 @@ func (cc *CapabilityContainer) Reset() {
 //
 // It returns the number of bytes read and an error if something looks wrong
 // (it uses check() to check for the integrity of the result).
-func (cc *CapabilityContainer) Unmarshal(buf []byte) (int, error) {
+func (cc *CapabilityContainer) Unmarshal(buf []byte) (rLen int, err error) {
+	defer helpers.HandleErrorPanic(&err, "RAPDU.Unmarshal")
+	bytesBuf := bytes.NewBuffer(buf)
 	cc.Reset()
+
 	if len(buf) < 15 {
 		return 0, errors.New(
 			"CapabilityContainer.Unmarshal: " +
 				"not enough bytes to parse")
 	}
 	i := 0
-	cc.CCLEN = helpers.BytesToUint16([2]byte{buf[0], buf[1]})
-	cc.MappingVersion = buf[2]
-	cc.MLe = helpers.BytesToUint16([2]byte{buf[3], buf[4]})
-	cc.MLc = helpers.BytesToUint16([2]byte{buf[5], buf[6]})
+	cc.CCLEN = helpers.BytesToUint16([2]byte{
+		helpers.GetByte(bytesBuf),
+		helpers.GetByte(bytesBuf)})
+	cc.MappingVersion = helpers.GetByte(bytesBuf)
+	cc.MLe = helpers.BytesToUint16([2]byte{
+		helpers.GetByte(bytesBuf),
+		helpers.GetByte(bytesBuf)})
+	cc.MLc = helpers.BytesToUint16([2]byte{
+		helpers.GetByte(bytesBuf),
+		helpers.GetByte(bytesBuf)})
 	i += 7
 
 	fcTLV := new(NDEFFileControlTLV)
-	parsed, err := fcTLV.Unmarshal(buf[i : i+8])
+	parsed, err := fcTLV.Unmarshal(helpers.GetBytes(bytesBuf, 8))
 	if err != nil {
-		return 0, err
+		return len(buf) - bytesBuf.Len(), err
 	}
 	cc.NDEFFileControlTLV = fcTLV
 	i += parsed
 
-	for i < int(cc.CCLEN) {
+	tlvBytes := bytesBuf.Bytes()
+	rLen = len(buf) - len(tlvBytes)
+	for rLen < int(cc.CCLEN) {
+		// First parse a regular TLV so we can look at its type
 		extraTLV := new(TLV)
-		parsed, err = extraTLV.Unmarshal(buf[i:len(buf)])
+		parsed, err = extraTLV.Unmarshal(buf[rLen:])
 		if err != nil {
-			return 0, err
+			rLen += parsed
+			return rLen, err
 		}
-		cc.TLVBlocks = append(cc.TLVBlocks, extraTLV)
-		i += parsed
+		// The Specs say: NFC Forum Devices shall ignore and
+		// jump over those TLV blocks that make use
+		// of reserved tag field values.
+		if extraTLV.T != TypeNDEFFileControlTLV &&
+			extraTLV.T != TypePropietaryFileControlTLV {
+			rLen += parsed
+			continue
+		}
+
+		// Then let's parse it as ControlTLV
+		extraControlTLV := new(ControlTLV)
+		parsed, err = extraControlTLV.Unmarshal(buf[rLen:])
+		rLen += parsed
+		if err != nil {
+			return rLen, err
+		}
+		cc.TLVBlocks = append(cc.TLVBlocks, extraControlTLV)
 	}
-	if i != int(cc.CCLEN) { // They'd better be equal
-		return 0, fmt.Errorf("CapabilityContainer.Unmarshal: "+
+	if rLen != int(cc.CCLEN) { // They'd better be equal
+		return rLen, fmt.Errorf("CapabilityContainer.Unmarshal: "+
 			"expected %d bytes but parsed %d bytes",
 			cc.CCLEN, i)
 	}
 
 	if err = cc.check(); err != nil {
-		return 0, err
+		return rLen, err
 	}
-	return i, nil
+	return rLen, nil
 }
 
 // Marshal returns the byte slice representation of a CapabilityContainer.
@@ -130,6 +158,14 @@ func (cc *CapabilityContainer) Marshal() ([]byte, error) {
 	}
 	buffer.Write(fcTLVBytes)
 	for _, tlv := range cc.TLVBlocks {
+		// Do not write TLV which are to be ignored
+		// by the NFC Forum devices according to the
+		// specs
+		if !tlv.IsNDEFFileControlTLV() &&
+			!tlv.IsPropietaryFileControlTLV() {
+			continue
+		}
+
 		tlvBytes, err := tlv.Marshal()
 		if err != nil {
 			return nil, err

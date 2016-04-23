@@ -135,6 +135,7 @@ func (driver *Driver) String() string {
 // It returns the received data or an error when something fails.
 func (driver *Driver) TransceiveBytes(tx []byte, rxLen int) ([]byte, error) {
 	rx := make([]byte, rxLen) //buffer to receive bytes
+	// fmt.Printf("T: % 02x\n", tx)
 	n, err := driver.device.InitiatorTransceiveBytes(tx, rx, -1)
 	if err != nil {
 		if err.(nfc.Error) == nfc.EOVFLOW {
@@ -144,6 +145,7 @@ func (driver *Driver) TransceiveBytes(tx []byte, rxLen int) ([]byte, error) {
 		}
 		return nil, err
 	}
+	// fmt.Printf("R: % 02x\n", rx)
 	return rx[0:n], nil
 }
 

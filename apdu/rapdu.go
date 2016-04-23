@@ -21,6 +21,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+
+	"github.com/hsanjuan/go-nfctype4/helpers"
 )
 
 // RAPDU types which come handy
@@ -60,21 +62,22 @@ func (apdu *RAPDU) String() string {
 // Unmarshal parses a byte slice and sets the RAPDU fields accordingly.
 // It always resets the RAPDU before parsing.
 // It returns the number of bytes parsed or an error if something goes wrong.
-func (apdu *RAPDU) Unmarshal(buf []byte) (int, error) {
+func (apdu *RAPDU) Unmarshal(buf []byte) (rLen int, err error) {
+	defer helpers.HandleErrorPanic(&err, "RAPDU.Unmarshal")
+	bytesBuf := bytes.NewBuffer(buf)
 	apdu.Reset()
 
-	if len(buf) < 2 {
-		return 0, errors.New(
-			"RAPDU.Umarshal: apdu needs at least 2 bytes")
+	// This could be done without the helpers.
+	// But let's be consistent with the rest of Unmarshals...
+	dataLen := bytesBuf.Len() - 2
+	if dataLen < 0 {
+		return 0, errors.New("RAPDU.Unmarshal: " +
+			"Not enough data to parse response")
 	}
-
-	length := len(buf)
-	apdu.SW1 = buf[length-2]
-	apdu.SW2 = buf[length-1]
-	if length >= 3 {
-		apdu.ResponseBody = buf[0 : length-2]
-	}
-	return length, nil
+	apdu.ResponseBody = helpers.GetBytes(bytesBuf, dataLen)
+	apdu.SW1 = helpers.GetByte(bytesBuf)
+	apdu.SW2 = helpers.GetByte(bytesBuf)
+	return len(buf), nil
 }
 
 // Marshal returns the byte slice representation of the RAPDU

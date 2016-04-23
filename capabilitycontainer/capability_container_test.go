@@ -51,11 +51,39 @@ func TestMarshalUnmarshal(t *testing.T) {
 				FileReadAccessCondition:  0,
 				FileWriteAccessCondition: 0,
 			},
-			TLVBlocks: []*TLV{
-				&TLV{
-					T: 0x05,
-					L: [3]byte{0x01, 0x00, 0x00},
-					V: []byte{0xFF},
+			TLVBlocks: []*ControlTLV{
+				&ControlTLV{
+					T:                        0x05,
+					L:                        0x06,
+					FileID:                   0xE104,
+					MaximumFileSize:          0x05,
+					FileReadAccessCondition:  0x00,
+					FileWriteAccessCondition: 0x00,
+				},
+			},
+		},
+		&CapabilityContainer{
+			CCLEN:          20,
+			MappingVersion: 0x20,
+			MLe:            255,
+			MLc:            255,
+			NDEFFileControlTLV: &NDEFFileControlTLV{
+				T:                        0x04,
+				L:                        0x06,
+				FileID:                   0xE104,
+				MaximumFileSize:          90,
+				FileReadAccessCondition:  0,
+				FileWriteAccessCondition: 0,
+			},
+			// This TLV Block should be ignored acc to the specs
+			TLVBlocks: []*ControlTLV{
+				&ControlTLV{
+					T:                        0x00, //bad!
+					L:                        0x06,
+					FileID:                   0xE104,
+					MaximumFileSize:          0x05,
+					FileReadAccessCondition:  0x00,
+					FileWriteAccessCondition: 0x00,
 				},
 			},
 		},
@@ -89,11 +117,14 @@ func TestMarshalUnmarshal(t *testing.T) {
 				FileReadAccessCondition:  0,
 				FileWriteAccessCondition: 0,
 			},
-			TLVBlocks: []*TLV{
-				&TLV{
-					T: 0x05,
-					L: [3]byte{0x01, 0x00, 0x00},
-					V: []byte{0xFF},
+			TLVBlocks: []*ControlTLV{
+				&ControlTLV{
+					T:                        0x05,
+					L:                        0x06,
+					FileID:                   0xE104,
+					MaximumFileSize:          0x05,
+					FileReadAccessCondition:  0x00,
+					FileWriteAccessCondition: 0x00,
 				},
 			},
 		},
@@ -110,11 +141,14 @@ func TestMarshalUnmarshal(t *testing.T) {
 				FileReadAccessCondition:  0,
 				FileWriteAccessCondition: 0,
 			},
-			TLVBlocks: []*TLV{
-				&TLV{
-					T: 0x05,
-					L: [3]byte{0x01, 0x00, 0x00},
-					V: []byte{0xFF},
+			TLVBlocks: []*ControlTLV{
+				&ControlTLV{
+					T:                        0x05,
+					L:                        0x06,
+					FileID:                   0xE104,
+					MaximumFileSize:          0x05,
+					FileReadAccessCondition:  0x00,
+					FileWriteAccessCondition: 0x00,
 				},
 			},
 		},
@@ -131,32 +165,14 @@ func TestMarshalUnmarshal(t *testing.T) {
 				FileReadAccessCondition:  0,
 				FileWriteAccessCondition: 0,
 			},
-			TLVBlocks: []*TLV{
-				&TLV{
-					T: 0x05,
-					L: [3]byte{0x01, 0x00, 0x00},
-					V: []byte{0xFF},
-				},
-			},
-		},
-		"bad_tlv": &CapabilityContainer{
-			CCLEN:          20,
-			MappingVersion: 0x20,
-			MLe:            255,
-			MLc:            255,
-			NDEFFileControlTLV: &NDEFFileControlTLV{
-				T:                        0x04,
-				L:                        0x06,
-				FileID:                   0xE104,
-				MaximumFileSize:          90,
-				FileReadAccessCondition:  0,
-				FileWriteAccessCondition: 0,
-			},
-			TLVBlocks: []*TLV{
-				&TLV{
-					T: 0x00, //bad
-					L: [3]byte{0x01, 0x00, 0x00},
-					V: []byte{0xFF},
+			TLVBlocks: []*ControlTLV{
+				&ControlTLV{
+					T:                        0x05,
+					L:                        0x06,
+					FileID:                   0xE104,
+					MaximumFileSize:          0x05,
+					FileReadAccessCondition:  0x00,
+					FileWriteAccessCondition: 0x00,
 				},
 			},
 		},

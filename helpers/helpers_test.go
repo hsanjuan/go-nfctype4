@@ -18,6 +18,8 @@
 package helpers
 
 import (
+	"bytes"
+	"errors"
 	"testing"
 )
 
@@ -37,5 +39,56 @@ func TestConversions(t *testing.T) {
 		if n2 != c.N {
 			t.Fail()
 		}
+	}
+}
+
+func TestGetByte(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("Panic expected but didn't happen")
+		}
+	}()
+
+	buf := bytes.NewBuffer([]byte{1})
+	a := GetByte(buf)
+	if a != 1 {
+		t.Error("a should be 1")
+	}
+
+	// This should panic
+	GetByte(buf)
+}
+
+func TestGetBytes(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("Panic expected but didn't happen")
+		}
+	}()
+
+	buf := bytes.NewBuffer([]byte{1, 2, 3})
+	a := GetBytes(buf, 2)
+	if a[0] != 1 || a[1] != 2 {
+		t.Error("a should be [1,2]")
+	}
+
+	b := GetBytes(buf, 0)
+	if len(b) != 0 {
+		t.Error("b should be empty")
+	}
+
+	// This should panic
+	GetBytes(buf, 5)
+}
+
+func TestHandleErrorPanic(t *testing.T) {
+	err := errors.New("hmm")
+	a := func() error {
+		defer HandleErrorPanic(&err, "Test")
+		panic(errors.New("Ops"))
+	}
+	a()
+	if err.Error() != "Test: Ops" {
+		t.Error("Expected an Ops error")
 	}
 }

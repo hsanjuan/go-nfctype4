@@ -86,9 +86,6 @@ func TestTLVUmarshal(t *testing.T) {
 
 func TestTLVMarshal(t *testing.T) {
 	testcasesBad := map[string]*TLV{
-		"bad_t": &TLV{
-			T: 0x07,
-		},
 		"bad_long_length": &TLV{
 			T: 0x05,
 			L: [3]byte{0xFF, 0x00, 0x01},
