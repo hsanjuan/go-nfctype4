@@ -235,21 +235,19 @@ func (apdu *CAPDU) Unmarshal(buf []byte) (rLen int, err error) {
 	// "0x00->65536 and 0x01->1...""
 
 	// We chose to follow Wikipedia on this.
-	bodyLen := bytesBuf.Len()
+	bodyBytes := bytesBuf.Bytes()
+	bodyLen := len(bodyBytes)
 	b1 := byte(0)
 	b2 := byte(0)
 	b3 := byte(0)
 	if bodyLen > 0 {
-		b1 = helpers.GetByte(bytesBuf)
-		bytesBuf.UnreadByte()
+		b1 = bodyBytes[0]
 	}
 	if bodyLen > 1 {
-		b2 = helpers.GetByte(bytesBuf)
-		bytesBuf.UnreadByte()
+		b2 = bodyBytes[1]
 	}
 	if bodyLen > 2 {
-		b3 = helpers.GetByte(bytesBuf)
-		bytesBuf.UnreadByte()
+		b3 = bodyBytes[2]
 	}
 	switch {
 	case bodyLen == 0:
