@@ -10,6 +10,9 @@ install:
   - go get golang.org/x/tools/cmd/cover
   - go get github.com/mattn/goveralls
   - go get github.com/hsanjuan/go-ndef
+  - go get github.com/hsanjuan/go-ndef/types
+  - go get github.com/hsanjuan/go-ndef/types/wkt/text
+  - go get github.com/hsanjuan/go-ndef/types/wkt/uri
   - go get github.com/fuzxxl/nfc/2.0/nfc
 script:
   - go test -v ./... && ./coverage.sh
