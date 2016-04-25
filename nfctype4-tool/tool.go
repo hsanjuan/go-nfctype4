@@ -16,7 +16,6 @@
 ***/
 
 // Package main provides a simple tool to read and write nfctype4 tags.
-// See the Description variable for more information
 package main
 
 import (
@@ -34,7 +33,7 @@ import (
 )
 
 // Description provides a description of the functionality of the tool
-// for both Godoc and the --help output.
+// for --help output.
 const Description = `
 go-nfctype4-tool allows to easily read and write NFC Forum Type 4 Tags.
 

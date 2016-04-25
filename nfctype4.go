@@ -16,7 +16,7 @@
 ***/
 
 // Package nfctype4 is an implementation of the NFC Forum Type 4 Tag
-// Operation Specification (Version 2.0)
+// Operation Specification Version 2.0 (NFCForum-TS-Type-4-Tag_2.0)
 //
 // nfctype4 can be used for both reading Tags, but also for implementing
 // software-based Tags that adjust to the specification.
@@ -32,7 +32,7 @@
 // A `libnfc` driver is provided, which allows working with any
 // libnfc-supported hardware.
 //
-// nfctype4 tries to be very strict when parsing and serializing
+// nfctype4 tries to be strict when parsing and serializing
 // data, and the Marshal() and Unmarshal() operations for the
 // different entities involved in the implementation will
 // error whenever a trangression to the specification is detected
