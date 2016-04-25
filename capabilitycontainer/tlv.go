@@ -20,6 +20,7 @@ package capabilitycontainer
 import (
 	"bytes"
 	"errors"
+	"fmt"
 
 	"github.com/hsanjuan/go-nfctype4/helpers"
 )
@@ -36,15 +37,15 @@ const (
 // field can be of 1 or 3 bytes. For the shorter version, the last 2 bytes of
 // the array are left unused.
 type TLV struct {
-	T byte    // Type of the TLV block. 00h-FEh. 00h-03h and 06h-FFh RFU.
-	L [3]byte // Size of the value field. Two last bytes may be unused
-	V []byte  // Value field
+	T byte   // Type of the TLV block. 00h-FEh. 00h-03h and 06h-FFh RFU.
+	L uint16 // Size of the value field.
+	V []byte // Value field
 }
 
 // Reset sets the fields of the TLV to their default values.
 func (tlv *TLV) Reset() {
 	tlv.T = 0
-	tlv.L = [3]byte{0, 0, 0}
+	tlv.L = 0
 	tlv.V = []byte{}
 }
 
@@ -52,52 +53,39 @@ func (tlv *TLV) Reset() {
 // It always resets the TLV before parsing.
 // It returns the number of bytes parsed or an error if the result does
 // not look correct.
-func (tlv *TLV) Unmarshal(buf []byte) (int, error) {
+func (tlv *TLV) Unmarshal(buf []byte) (rLen int, err error) {
+	defer helpers.HandleErrorPanic(&err, "TLV.Unmarshal")
+	bytesBuf := bytes.NewBuffer(buf)
 	tlv.Reset()
-	if len(buf) == 0 {
-		return 0, errors.New(
-			"TLV.Unmarshal: need at least 1 byte to parse a TLV")
-	}
-	tlv.T = buf[0]
-	if len(buf) == 1 {
+
+	tlv.T = helpers.GetByte(bytesBuf)
+	if bytesBuf.Len() == 0 {
 		// No length field. pff
-		tlv.L = [3]byte{0, 0, 0}
+		tlv.L = 0
 		tlv.V = []byte{}
 		return 1, nil
 	}
-	tlv.L[0] = buf[1]
-	vLen := uint16(0)
-	var parsed int
-	if tlv.L[0] == 0xFF { // 3 byte format
-		if len(buf) < 4 {
-			return 0, errors.New(
-				"TLV.Unmarshal: not enough bytes to parse")
-		}
-		tlv.L[1] = buf[2]
-		tlv.L[2] = buf[3]
-		vLen = helpers.BytesToUint16([2]byte{tlv.L[1], tlv.L[2]})
-		if len(buf) < 4+int(vLen) {
-			return 0, errors.New(
-				"TLV.Unmarshal: not enough bytes to parse")
-		}
-		tlv.V = buf[4 : 4+int(vLen)]
-		parsed = 4 + len(tlv.V)
+	l0 := helpers.GetByte(bytesBuf)
+
+	if l0 == 0xFF { // 3 byte format
+		l1 := helpers.GetByte(bytesBuf)
+		l2 := helpers.GetByte(bytesBuf)
+		tlv.L = helpers.BytesToUint16([2]byte{l1, l2})
 	} else {
-		vLen = uint16(tlv.L[0])
-		if len(buf) < 2+int(vLen) {
-			return 0, errors.New(
-				"TLV.Unmarshal: not enough bytes to parse")
-		}
-		tlv.V = buf[2 : 2+int(vLen)]
-		parsed = 2 + len(tlv.V)
+		tlv.L = uint16(l0)
 	}
+	tlv.V = helpers.GetBytes(bytesBuf, int(tlv.L))
 
-	// Test just in case
+	rLen = len(buf) - bytesBuf.Len()
 	if err := tlv.check(); err != nil {
-		return 0, err
+		return rLen, err
+	}
+	if tlv.L < 0xFF && l0 == 0xFF {
+		return rLen, errors.New("TLV.Unmarshal: " +
+			"3-byte length used for a value < 0xFF")
 	}
 
-	return parsed, nil
+	return rLen, nil
 }
 
 // Marshal returns the byte slice representation of a TLV.
@@ -108,10 +96,12 @@ func (tlv *TLV) Marshal() ([]byte, error) {
 	}
 	var buffer bytes.Buffer
 	buffer.WriteByte(tlv.T)
-	if tlv.L[0] == 0xFF { // 3 byte format
-		buffer.Write(tlv.L[:])
+	if tlv.L >= 0xFF { // 3 byte format
+		buffer.WriteByte(0xFF)
+		lBytes := helpers.Uint16ToBytes(tlv.L)
+		buffer.Write(lBytes[:])
 	} else { // 1 byte only
-		buffer.WriteByte(tlv.L[0])
+		buffer.WriteByte(byte(tlv.L))
 	}
 	buffer.Write(tlv.V)
 	return buffer.Bytes(), nil
@@ -122,26 +112,24 @@ func (tlv *TLV) Marshal() ([]byte, error) {
 // correctly.
 // It returns an error when something does not look right.
 func (tlv *TLV) check() error {
-	if tlv.T != 0x04 && tlv.T != 0x05 {
-		return errors.New("TLV T[ype] is RFU")
-	}
+	// This cannot be checked anymore with L as uint16
+	// var vLen uint16
+	// if tlv.L[0] == 0xFF {
+	// 	vLen = helpers.BytesToUint16([2]byte{tlv.L[1], tlv.L[2]})
+	// 	if vLen < 0xFF {
+	// 		return errors.New(
+	// 			"TLV.check: 3-byte Length's last 2 bytes " +
+	// 				"value should > 0xFF")
+	// 	}
+	// 	if vLen == 0xFFFF {
+	// 		return errors.New("TLV.check: 3-byte Length's last " +
+	// 			"2 bytes value 0xFFFF is RFU")
+	// 	}
+	// } else {
+	// 	vLen = uint16(tlv.L[0])
+	// }
 
-	var vLen uint16
-	if tlv.L[0] == 0xFF {
-		vLen = helpers.BytesToUint16([2]byte{tlv.L[1], tlv.L[2]})
-		if vLen < 0xFF {
-			return errors.New(
-				"TLV.check: 3-byte Length's last 2 bytes " +
-					"value should > 0xFF")
-		}
-		if vLen == 0xFFFF {
-			return errors.New("TLV.check: 3-byte Length's last " +
-				"2 bytes value 0xFFFF is RFU")
-		}
-	} else {
-		vLen = uint16(tlv.L[0])
-	}
-	if int(vLen) != len(tlv.V) {
+	if int(tlv.L) != len(tlv.V) {
 		return errors.New(
 			"TLV.check: L[ength] does not match the V[alue] length")
 	}
@@ -174,30 +162,30 @@ type PropietaryFileControlTLV ControlTLV
 // Unmarshal parses a byte slice and sets the ControlTLV fields accordingly.
 // It returns the number of bytes parsed or an error if the result does
 // not look correct.
-func (cTLV *ControlTLV) Unmarshal(buf []byte) (int, error) {
+func (cTLV *ControlTLV) Unmarshal(buf []byte) (rLen int, err error) {
 	// Parse it to a regular TLV
 	tlv := new(TLV)
-	parsed, err := tlv.Unmarshal(buf)
+	rLen, err = tlv.Unmarshal(buf)
 	if err != nil {
-		return 0, err
+		return rLen, err
 	}
-	if parsed != 8 {
-		return 0, errors.New("ControlTLV: Wrong size")
+	if rLen != 8 {
+		return rLen, fmt.Errorf("ControlTLV: Wrong size %d", rLen)
 	}
 
 	cTLV.T = tlv.T
-	cTLV.L = tlv.L[0]
+	cTLV.L = byte(tlv.L)
 	cTLV.FileID = helpers.BytesToUint16([2]byte{tlv.V[0], tlv.V[1]})
 	cTLV.MaximumFileSize = helpers.BytesToUint16([2]byte{tlv.V[2], tlv.V[3]})
 	cTLV.FileReadAccessCondition = tlv.V[4]
 	cTLV.FileWriteAccessCondition = tlv.V[5]
 
 	if err := cTLV.check(); err != nil {
-		return 0, err
+		return rLen, err
 	}
 
 	// Return that we parsed 8 bytes
-	return 8, nil
+	return rLen, nil
 }
 
 // Marshal returns the byte slice representation of a ControlTLV.
@@ -211,7 +199,7 @@ func (cTLV *ControlTLV) Marshal() ([]byte, error) {
 	// Copy this to a regular TLV and leverage Marshal() from there
 	tlv := new(TLV)
 	tlv.T = cTLV.T
-	tlv.L[0] = cTLV.L
+	tlv.L = uint16(cTLV.L)
 	var v bytes.Buffer
 	fileID := helpers.Uint16ToBytes(cTLV.FileID)
 	v.Write(fileID[:])
@@ -259,20 +247,20 @@ func (cTLV *ControlTLV) check() error {
 // accordingly.
 // It returns the number of bytes parsed or an error if the result does
 // not follow the specification.
-func (nfcTLV *NDEFFileControlTLV) Unmarshal(buf []byte) (int, error) {
+func (nfcTLV *NDEFFileControlTLV) Unmarshal(buf []byte) (rLen int, err error) {
 	// Reuse functions
 	tlv := (*ControlTLV)(nfcTLV)
-	parsed, err := tlv.Unmarshal(buf)
+	rLen, err = tlv.Unmarshal(buf)
 	if err != nil {
-		return parsed, err
+		return rLen, err
 	}
 
 	if !tlv.IsNDEFFileControlTLV() {
-		return parsed, errors.New("NDEFFileControlTLV.Unmarshal: " +
+		return rLen, errors.New("NDEFFileControlTLV.Unmarshal: " +
 			"TLV is not a NDEF File Control TLV")
 	}
 
-	return parsed, nil
+	return rLen, nil
 }
 
 // Marshal returns the byte slice representation of a NDEFFileControlTLV.
@@ -287,21 +275,21 @@ func (nfcTLV *NDEFFileControlTLV) Marshal() ([]byte, error) {
 // accordingly.
 // It returns the number of bytes parsed or an error if the result does
 // not follow the specification.
-func (pfcTLV *PropietaryFileControlTLV) Unmarshal(buf []byte) (int, error) {
+func (pfcTLV *PropietaryFileControlTLV) Unmarshal(buf []byte) (rLen int, err error) {
 	// Reuse functions
 	tlv := (*ControlTLV)(pfcTLV)
-	parsed, err := tlv.Unmarshal(buf)
+	rLen, err = tlv.Unmarshal(buf)
 	if err != nil {
-		return parsed, err
+		return rLen, err
 	}
 
 	if !tlv.IsPropietaryFileControlTLV() {
-		return parsed, errors.New(
+		return rLen, errors.New(
 			"PropietaryFileControlTLV.Unmarshal:" +
 				"TLV is not a Propietary File Control TLV")
 	}
 
-	return parsed, nil
+	return rLen, nil
 }
 
 // Marshal returns the byte slice representation of a PropietaryFileControlTLV.

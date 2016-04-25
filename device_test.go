@@ -145,12 +145,10 @@ func ExampleDevice_Read_dummy() {
 	} else {
 		// Since Yubikeys provide a type 'U' NDEF
 		// message, we can print the url like this
-		fmt.Printf("%s%s",
-			ndef.URIProtocols[message.Payload[0]],
-			string(message.Payload[1:]))
+		fmt.Println(message)
 	}
 	// Output:
-	// https://my.yubico.com/neo/cccccccccccccccccccccccccccccccccccccccccccc
+	// urn:nfc:wkt:U:https://my.yubico.com/neo/cccccccccccccccccccccccccccccccccccccccccccc
 }
 
 func TestRead_goodExamples(t *testing.T) {
@@ -184,7 +182,7 @@ func TestRead_badExamples(t *testing.T) {
 		"ndef_file_zero_length":                "Device.Read: no NDEF Message detected.",
 		"device_invalid_state":                 "Device.Read: Device is not in a valid state",
 		"ndef_file_read_error":                 "Commander.ReadBinary: Error. SW1: 00h. SW2: 00h",
-		"ndef_file_bad_record":                 "Message.checkRecords: A single record cannot have the Chunk flag set",
+		"ndef_file_bad_record":                 "checkChunks: A single record cannot have the Chunk flag set",
 	}
 	device := new(Device)
 	for name, byteSet := range dummyTestSetsBad {
@@ -218,11 +216,7 @@ func TestUpdate(t *testing.T) {
 	device.Setup(driver)
 
 	// First test with a very simple message
-	simpleMsg := &ndef.Message{
-		TNF:     ndef.NFCForumWellKnownType,
-		Type:    []byte("T"),
-		Payload: []byte("This is a text message"),
-	}
+	simpleMsg := ndef.NewURIMessage("url.com")
 
 	err := device.Update(simpleMsg)
 	if err != nil {
@@ -233,16 +227,14 @@ func TestUpdate(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	if !bytes.Equal(simpleMsg.Payload, readMsg.Payload) {
+	if !bytes.Equal(simpleMsg.Records[0].Payload.Marshal(),
+		readMsg.Records[0].Payload.Marshal()) {
 		t.Error("Payloads don't match for simpleMsg")
 	}
 
 	// Now test with a very long size
-	longMsg := &ndef.Message{
-		TNF:  ndef.NFCForumWellKnownType,
-		Type: []byte("T"),
-	}
-	longMsg.Payload = make([]byte, 0xFFE0)
+	longMsg := ndef.NewMessage(ndef.NFCForumWellKnownType, "U", "",
+		make([]byte, 0xFFE0))
 	err = device.Update(longMsg)
 	if err != nil {
 		t.Error(err.Error())
@@ -252,16 +244,15 @@ func TestUpdate(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	if !bytes.Equal(longMsg.Payload, readMsg.Payload) {
+	if !bytes.Equal(
+		longMsg.Records[0].Payload.Marshal(),
+		readMsg.Records[0].Payload.Marshal()) {
 		t.Error("Payloads don't match for longMsg")
 	}
 
 	// Now test with a message over the maximum size
-	badMsg := &ndef.Message{
-		TNF:  ndef.NFCForumWellKnownType,
-		Type: []byte("T"),
-	}
-	badMsg.Payload = make([]byte, 0xFFFE)
+	badMsg := ndef.NewMessage(ndef.NFCForumWellKnownType, "local", "",
+		make([]byte, 0xFFFE))
 	err = device.Update(badMsg)
 	if err == nil {
 		t.Error("Update with badMsg should have failed")
@@ -274,13 +265,7 @@ func TestFormat(t *testing.T) {
 	// We will use the software tags
 
 	tag := static.New()
-
-	// First assume our tag has a simple message
-	simpleMsg := &ndef.Message{
-		TNF:     ndef.NFCForumWellKnownType,
-		Type:    []byte("T"),
-		Payload: []byte("This is a text message"),
-	}
+	simpleMsg := ndef.NewTextMessage("This is a text message", "en")
 	tag.SetMessage(simpleMsg)
 
 	driver := &swtag.Driver{

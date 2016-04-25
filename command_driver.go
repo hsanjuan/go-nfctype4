@@ -18,15 +18,18 @@
 package nfctype4
 
 // CommandDriver interface is the minimal set of methods the drivers
-// used to communicate with an NFC device need to satisfy.
-// A command driver allows to use a typical
-// NFC reader to send an receive data from an NFC device.
+// need to satisfy to allow communication between the NFC Device
+// (provided by nfctype4) and the NFC Tag.
+//
+// Command drivers are in charge of implementing the link that
+// allows this communication between Device and Tag.
 //
 // nfctype4 provides a LibnfcCommandDriver driver, which uses libnfc
-// to use a connected NFC reader and read from the NFC Type 4 Tag device.
+// to use a connected NFC reader and read from a real NFC Type 4 Tag device.
 //
-// Custom command drivers are supported, they must just implement the
-// interface. See the DummyCommandDriver for an example.
+// Other drivers are possible. See the DummyCommandDriver for an example,
+// or the swtag which allows communication with software tags as defined
+// in the Tag interface from the tags module.
 type CommandDriver interface {
 	Initialize() error // Makes the driver ready for TransceiveBytes
 	Close()            // Tells the driver it won't be used anymore

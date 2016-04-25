@@ -20,7 +20,6 @@
 package static
 
 import (
-	//	"fmt"
 	"bytes"
 	"encoding/binary"
 	"errors"

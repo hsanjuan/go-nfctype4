@@ -5,11 +5,11 @@ Go-nfctype4
 |:-------------:|:--------:|:---------:|
 | [![Build Status](https://travis-ci.org/hsanjuan/go-nfctype4.svg?branch=master)](https://travis-ci.org/hsanjuan/go-nfctype4) [![Coverage Status](https://coveralls.io/repos/github/hsanjuan/go-nfctype4/badge.svg?branch=master)](https://coveralls.io/github/hsanjuan/go-nfctype4?branch=master) | [![Build Status](https://travis-ci.org/hsanjuan/go-nfctype4.svg?branch=unstable)](https://travis-ci.org/hsanjuan/go-nfctype4) [![Coverage Status](https://coveralls.io/repos/github/hsanjuan/go-nfctype4/badge.svg?branch=unstable)](https://coveralls.io/github/hsanjuan/go-nfctype4?branch=unstable) | [![GoDoc](https://godoc.org/github.com/hsanjuan/go-nfctype4?status.svg)](http://godoc.org/github.com/hsanjuan/go-nfctype4) |
 
-Package `go-nfctype4` implements the NFC Forum Type 4 Tag Operation Specification.
+Package `go-nfctype4` implements the NFC Forum Type 4 Tag Operation Specification Version 2.0.
 
-It provides a `Device` type which allows to interact with NFC Devices (like readers) and perform `Read` and `Update` operations on the NFC tags.
+The implementation acts as an NFC Forum Device (an entity that can read and write NFC Forum Tags). For such. it provides a `Device` type which can `Read`, `Update` and `Format` NFC tags.
 
-It also allows to easily implement software-based NFC Type 4 compliant tags, which can be easily used to provide hardware NFC Readers in target-mode with the necessary functionality to adjust to the specification and act like real Type 4 Tags.
+The module and submodules contain all the pieces to impelment software-based NFC Type 4 Tags as well. For more information about this check the documentation.
 
 nfctype4-tool
 -------------
@@ -18,7 +18,7 @@ nfctype4-tool
 
 `go install github.com/hsanjuan/go-nfctype4/nfctype4-tool`
 
-You can then run `nfctype4-tool -h` for more information.
+You can then run `nfctype4-tool -h` to get going.
 
 Packages
 --------

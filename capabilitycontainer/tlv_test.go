@@ -17,7 +17,10 @@
 
 package capabilitycontainer
 
-import "testing"
+import (
+	"bytes"
+	"testing"
+)
 
 func TestControlTLVMarshalErrors(t *testing.T) {
 	testcases := map[string]*ControlTLV{
@@ -66,10 +69,11 @@ func TestControlTLVMarshalErrors(t *testing.T) {
 
 func TestTLVUmarshal(t *testing.T) {
 	testcasesBad := map[string][]byte{
+		// We cannot test these
 		"bad_long_length":  []byte{0x04, 0xFF, 0x00, 0x01, 0xdd},
 		"bad_long_length2": []byte{0x04, 0xFF, 0x01, 0x01, 0xdd},
 		"bad_short_length": []byte{0x04, 0xFF, 0xdd},
-		"length_mismatch":  []byte{0x04, 0x05, 0xdd, 0xdd},
+		"length_mismatch":  []byte{0x04, 0x06, 0xdd, 0xdd, 0xdd},
 	}
 
 	for k, tlvB := range testcasesBad {
@@ -84,22 +88,50 @@ func TestTLVUmarshal(t *testing.T) {
 	}
 }
 
+func TestPropietaryFileControlTLVMarshalUnmarshal(t *testing.T) {
+	tlv := new(PropietaryFileControlTLV)
+	tlv.T = TypePropietaryFileControlTLV
+	tlv.L = 0x06
+	tlv.FileID = 0xE104
+	tlv.MaximumFileSize = 20
+
+	tlvBytes, err := tlv.Marshal()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	tlv2 := new(PropietaryFileControlTLV)
+	_, err = tlv2.Unmarshal(tlvBytes)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	tlv2Bytes, err := tlv.Marshal()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	t.Logf("tlv1: % 02x", tlvBytes)
+	t.Logf("tlv2: % 02x", tlv2Bytes)
+	if !bytes.Equal(tlvBytes, tlv2Bytes) {
+		t.Error("Expected equal bytes")
+	}
+}
+
+func TestEmptyTLVUnmarshal(t *testing.T) {
+	tlvBytes := []byte{0x1}
+	tlv := new(TLV)
+	parsed, err := tlv.Unmarshal(tlvBytes)
+	if parsed != 1 || err != nil {
+		t.Error("It should be ok to parse an empty TLV")
+	}
+}
+
 func TestTLVMarshal(t *testing.T) {
 	testcasesBad := map[string]*TLV{
-		"bad_t": &TLV{
-			T: 0x07,
-		},
-		"bad_long_length": &TLV{
-			T: 0x05,
-			L: [3]byte{0xFF, 0x00, 0x01},
-		},
-		"bad_long_length2": &TLV{
-			T: 0x05,
-			L: [3]byte{0xFF, 0xFF, 0xFF},
-		},
 		"length_mismatch": &TLV{
 			T: 0x05,
-			L: [3]byte{0x03},
+			L: 3,
 			V: []byte{0xdd},
 		},
 	}

@@ -218,20 +218,14 @@ func (apdu *CAPDU) check() error {
 // Unmarshal parses a byte slice and sets the CAPDU fields accordingly.
 // It resets the CAPDU structure before parsing.
 // It returns the number of bytes parsed or an error if something goes wrong.
-func (apdu *CAPDU) Unmarshal(buf []byte) (int, error) {
-	if len(buf) < 4 {
-		return 0, errors.New("CAPDU.Unmarshal: not enough bytes")
-	}
+func (apdu *CAPDU) Unmarshal(buf []byte) (rLen int, err error) {
+	defer helpers.HandleErrorPanic(&err, "CAPDU.Unmarshal")
 	apdu.Reset()
-	i := 0
-	apdu.CLA = buf[i]
-	i++
-	apdu.INS = buf[i]
-	i++
-	apdu.P1 = buf[i]
-	i++
-	apdu.P2 = buf[i]
-	i++
+	bytesBuf := bytes.NewBuffer(buf)
+	apdu.CLA = helpers.GetByte(bytesBuf)
+	apdu.INS = helpers.GetByte(bytesBuf)
+	apdu.P1 = helpers.GetByte(bytesBuf)
+	apdu.P2 = helpers.GetByte(bytesBuf)
 
 	// See table 5 here about what's going on
 	// http://www.cardwerk.com/smartcards/smartcard_standard_ISO7816-4_5_basic_organizations.aspx
@@ -241,18 +235,19 @@ func (apdu *CAPDU) Unmarshal(buf []byte) (int, error) {
 	// "0x00->65536 and 0x01->1...""
 
 	// We chose to follow Wikipedia on this.
-	bodyLen := len(buf) - i
+	bodyBytes := bytesBuf.Bytes()
+	bodyLen := len(bodyBytes)
 	b1 := byte(0)
 	b2 := byte(0)
 	b3 := byte(0)
 	if bodyLen > 0 {
-		b1 = buf[i]
+		b1 = bodyBytes[0]
 	}
 	if bodyLen > 1 {
-		b2 = buf[i+1]
+		b2 = bodyBytes[1]
 	}
 	if bodyLen > 2 {
-		b3 = buf[i+2]
+		b3 = bodyBytes[2]
 	}
 	switch {
 	case bodyLen == 0:
@@ -266,62 +261,53 @@ func (apdu *CAPDU) Unmarshal(buf []byte) (int, error) {
 		// No byte is used for Lc valued to 0
 		// No data byte is present.
 		// B1 codes Le valued from 1 to 256
-		apdu.Le = []byte{b1}
+		apdu.Le = helpers.GetBytes(bytesBuf, 1)
 	case bodyLen == (1+int(b1)) && b1 != 0:
 		// Case 3S - L=1 + (B1) and (B1) != 0
 		// B1 codes Lc (=0) valued from 1 to 255
 		// B2 to Bl are the Lc bytes of the data field
 		// No byte is used for Le valued to 0.
-		apdu.Lc = []byte{b1}
-		i++
-		apdu.Data = buf[i : i+int(b1)]
-		i += int(b1)
+		apdu.Lc = helpers.GetBytes(bytesBuf, 1)
+		apdu.Data = helpers.GetBytes(bytesBuf, int(b1))
 	case bodyLen == (2+int(b1)) && b1 != 0:
 		// Case 4S - L=2 + (B1) and (B1) != 0
 		// B1 codes Lc (!=0) valued from 1 to 255
 		// B2 to Bl-1 are the Lc bytes of the data field
 		// Bl codes Le from 1 to 256
-		apdu.Lc = []byte{b1}
-		i++
-		apdu.Data = buf[i : i+int(b1)]
-		i += int(b1)
-		apdu.Le = []byte{buf[i]}
-		i++
+		apdu.Lc = helpers.GetBytes(bytesBuf, 1)
+		apdu.Data = helpers.GetBytes(bytesBuf, int(b1))
+		apdu.Le = helpers.GetBytes(bytesBuf, 1)
 	case bodyLen == 3 && b1 == 0:
 		// Case 2E - L=3 and (B1)=0
 		// No byte is used for Lc valued to 0
 		// No data bytes is present
 		// The Le field consists of the 3 bytes where B2 and
 		// B3 code Le valued from 1 to 65536
-		apdu.Le = []byte{b1, b2, b3}
-		i += 3
+		// apdu.Le = []byte{b1, b2, b3}
+		apdu.Le = helpers.GetBytes(bytesBuf, 3)
 	case bodyLen == (3+int(helpers.BytesToUint16([2]byte{b2, b3}))) && b1 == 0 && (b2|b3) != 0:
 		// Case 3E - L=3 + (B2||B3). (B1)=0 and (B2||B3)=0
 		// It should say: L=3 + (B2||B3). (B1)=0 and (B2||B3)!=0
 		// The Lc field consists of the first 3 bytes where B2 and B3 code Lc (!=0) valued from 1 to 65536
 		// B4 and B2 are the Lc bytes of the data field
 		// No byte is used for Le valued to 0
-		apdu.Lc = []byte{b1, b2, b3}
-		i += 3
-		apdu.Data = buf[i : i+int(apdu.GetLc())]
-		i += int(apdu.GetLc())
+		apdu.Lc = helpers.GetBytes(bytesBuf, 3)
+		apdu.Data = helpers.GetBytes(bytesBuf, int(apdu.GetLc()))
 	case bodyLen == (5+int(helpers.BytesToUint16([2]byte{b2, b3}))) && b1 == 0 && (b2|b3) != 0:
 		//Case 4E - L= 5 + (B2||B3),(B1)=0 and (B2||B3)=0
 		// The Lc field consists of the first 3 bytes where B2 and B3 code Lc (!=0) valued from 1 to 65535
 		//B4 to Bl-2 are the Lc bytes of the data field
 		//The Le field consists of the last 2 bytes Bl-1 and Bl which code Le valued from 1 to 65536
-		apdu.Lc = []byte{b1, b2, b3}
-		i += 3
-		apdu.Data = buf[i : i+int(apdu.GetLc())]
-		i += int(apdu.GetLc())
-		apdu.Le = []byte{buf[i], buf[i+1]}
-		i += 2
+		apdu.Lc = helpers.GetBytes(bytesBuf, 3)
+		apdu.Data = helpers.GetBytes(bytesBuf, int(apdu.GetLc()))
+		apdu.Le = helpers.GetBytes(bytesBuf, 2)
 	}
+	rLen = len(buf) - bytesBuf.Len()
 
 	if err := apdu.check(); err != nil {
-		return i, err
+		return rLen, err
 	}
-	return i, nil
+	return rLen, nil
 }
 
 // Marshal provides the byte-slice value for a CAPDU, so it can be sent
