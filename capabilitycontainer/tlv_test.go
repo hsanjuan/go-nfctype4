@@ -17,7 +17,10 @@
 
 package capabilitycontainer
 
-import "testing"
+import (
+	"bytes"
+	"testing"
+)
 
 func TestControlTLVMarshalErrors(t *testing.T) {
 	testcases := map[string]*ControlTLV{
@@ -82,6 +85,45 @@ func TestTLVUmarshal(t *testing.T) {
 			// FIXME: are we getting the error we expect?
 			t.Logf("%s: %s", k, err.Error())
 		}
+	}
+}
+
+func TestPropietaryFileControlTLVMarshalUnmarshal(t *testing.T) {
+	tlv := new(PropietaryFileControlTLV)
+	tlv.T = TypePropietaryFileControlTLV
+	tlv.L = 0x06
+	tlv.FileID = 0xE104
+	tlv.MaximumFileSize = 20
+
+	tlvBytes, err := tlv.Marshal()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	tlv2 := new(PropietaryFileControlTLV)
+	_, err = tlv2.Unmarshal(tlvBytes)
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	tlv2Bytes, err := tlv.Marshal()
+	if err != nil {
+		t.Log(err)
+		t.FailNow()
+	}
+	t.Logf("tlv1: % 02x", tlvBytes)
+	t.Logf("tlv2: % 02x", tlv2Bytes)
+	if !bytes.Equal(tlvBytes, tlv2Bytes) {
+		t.Error("Expected equal bytes")
+	}
+}
+
+func TestEmptyTLVUnmarshal(t *testing.T) {
+	tlvBytes := []byte{0x1}
+	tlv := new(TLV)
+	parsed, err := tlv.Unmarshal(tlvBytes)
+	if parsed != 1 || err != nil {
+		t.Error("It should be ok to parse an empty TLV")
 	}
 }
 
