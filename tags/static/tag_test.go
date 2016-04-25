@@ -22,17 +22,17 @@ import (
 	"fmt"
 
 	"github.com/hsanjuan/go-ndef"
+	"github.com/hsanjuan/go-ndef/types/wkt/text"
 	"github.com/hsanjuan/go-nfctype4"
 	"github.com/hsanjuan/go-nfctype4/drivers/swtag"
 )
 
 func ExampleTag_read() {
 	// Let's create a NDEF Message first
-	ndefMessage := &ndef.Message{
-		TNF:     ndef.NFCForumWellKnownType,
-		Type:    []byte("T"),
-		Payload: []byte("This is a text payload for this message"),
-	}
+	ndefMessage := ndef.NewMessage(
+		ndef.NFCForumWellKnownType, "U", "",
+		[]byte("\x01test.payload"))
+
 	// Store this message in a static tag
 	tag := New()
 	err := tag.SetMessage(ndefMessage)
@@ -59,7 +59,7 @@ func ExampleTag_read() {
 		fmt.Println(receivedMessage)
 	}
 	// Output:
-	// This is a text payload for this message
+	// urn:nfc:wkt:U:http://www.test.payload
 }
 
 func ExampleTag_write() {
@@ -78,10 +78,13 @@ func ExampleTag_write() {
 
 	// Now we can update the message using the NFC Type 4 Tag
 	// operation specification with a new message
-	ndefMessage := &ndef.Message{
-		TNF:     ndef.NFCForumWellKnownType,
-		Type:    []byte("T"),
-		Payload: []byte("This is a new message"),
+	ndefMessage := new(ndef.Message)
+	ndefMessage.Records = []*ndef.Record{
+		&ndef.Record{
+			TNF:     ndef.NFCForumWellKnownType,
+			Type:    "T",
+			Payload: text.New("This is a new message", "en"),
+		},
 	}
 	err := device.Update(ndefMessage)
 	if err != nil {
@@ -94,5 +97,5 @@ func ExampleTag_write() {
 	fmt.Println(tagMessage)
 
 	// Output:
-	// This is a new message
+	// urn:nfc:wkt:T:This is a new message
 }

@@ -55,7 +55,7 @@ func GetBytes(b *bytes.Buffer, n int) []byte {
 	return slice
 }
 
-// GetBytes reads a single byte from a bytes.Buffer and panics with an error
+// GetByte reads a single byte from a bytes.Buffer and panics with an error
 // when the buffer cannot provide it because there is no more
 // to read. See GetBytes for justification and usage.
 func GetByte(b *bytes.Buffer) byte {
@@ -66,6 +66,9 @@ func GetByte(b *bytes.Buffer) byte {
 	return byte
 }
 
+// HandleErrorPanic recovers from custom panics (those which are not
+// runtime.Error) and sets the value of the error variable passed as
+// reference.
 func HandleErrorPanic(err *error, functionName string) {
 	if r := recover(); r != nil {
 		if _, ok := r.(runtime.Error); ok {
