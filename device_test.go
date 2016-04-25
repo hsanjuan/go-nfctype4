@@ -23,9 +23,6 @@ import (
 	"testing"
 
 	"github.com/hsanjuan/go-ndef"
-	"github.com/hsanjuan/go-ndef/types"
-	"github.com/hsanjuan/go-ndef/types/wkt/text"
-	"github.com/hsanjuan/go-ndef/types/wkt/uri"
 	"github.com/hsanjuan/go-nfctype4/drivers/dummy"
 	"github.com/hsanjuan/go-nfctype4/drivers/swtag"
 	"github.com/hsanjuan/go-nfctype4/tags/static"
@@ -219,18 +216,7 @@ func TestUpdate(t *testing.T) {
 	device.Setup(driver)
 
 	// First test with a very simple message
-	simpleMsg := &ndef.Message{
-		Records: []*ndef.Record{
-			&ndef.Record{
-				TNF:  ndef.NFCForumWellKnownType,
-				Type: "U",
-				Payload: &uri.URI{
-					IdentCode: 4,
-					URIField:  "url.com",
-				},
-			},
-		},
-	}
+	simpleMsg := ndef.NewURIMessage("url.com")
 
 	err := device.Update(simpleMsg)
 	if err != nil {
@@ -247,17 +233,8 @@ func TestUpdate(t *testing.T) {
 	}
 
 	// Now test with a very long size
-	longMsg := &ndef.Message{
-		Records: []*ndef.Record{
-			&ndef.Record{
-				TNF:  ndef.NFCForumWellKnownType,
-				Type: "U",
-			},
-		},
-	}
-	longMsg.Records[0].Payload = &types.Generic{
-		Payload: make([]byte, 0xFFE0),
-	}
+	longMsg := ndef.NewMessage(ndef.NFCForumWellKnownType, "U", "",
+		make([]byte, 0xFFE0))
 	err = device.Update(longMsg)
 	if err != nil {
 		t.Error(err.Error())
@@ -274,16 +251,8 @@ func TestUpdate(t *testing.T) {
 	}
 
 	// Now test with a message over the maximum size
-	badMsg := &ndef.Message{
-		Records: []*ndef.Record{
-			&ndef.Record{
-				TNF:     ndef.NFCForumWellKnownType,
-				Type:    "T",
-				Payload: &types.Generic{},
-			},
-		},
-	}
-	badMsg.Records[0].Payload.Unmarshal(make([]byte, 0xFFFE))
+	badMsg := ndef.NewMessage(ndef.NFCForumWellKnownType, "local", "",
+		make([]byte, 0xFFFE))
 	err = device.Update(badMsg)
 	if err == nil {
 		t.Error("Update with badMsg should have failed")
@@ -296,19 +265,7 @@ func TestFormat(t *testing.T) {
 	// We will use the software tags
 
 	tag := static.New()
-
-	mRecordPl := text.New("This is a text message", "en")
-
-	// First assume our tag has a simple message
-	simpleMsg := &ndef.Message{
-		Records: []*ndef.Record{
-			&ndef.Record{
-				TNF:     ndef.NFCForumWellKnownType,
-				Type:    "T",
-				Payload: mRecordPl,
-			},
-		},
-	}
+	simpleMsg := ndef.NewTextMessage("This is a text message", "en")
 	tag.SetMessage(simpleMsg)
 
 	driver := &swtag.Driver{

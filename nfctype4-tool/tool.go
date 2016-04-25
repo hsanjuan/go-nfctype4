@@ -25,7 +25,7 @@ import (
 	"os"
 
 	"github.com/hsanjuan/go-ndef"
-	"github.com/hsanjuan/go-ndef/types"
+	"github.com/hsanjuan/go-ndef/types/generic"
 	"github.com/hsanjuan/go-ndef/types/wkt/text"
 	"github.com/hsanjuan/go-ndef/types/wkt/uri"
 	"github.com/hsanjuan/go-nfctype4"
@@ -167,16 +167,16 @@ func doWrite() {
 		case "T":
 			record.Payload = text.New(payload, "en")
 		default:
-			record.Payload = &types.Generic{
+			record.Payload = &generic.Payload{
 				Payload: []byte(payload),
 			}
 		}
 	case ndef.MediaType:
-		record.Payload = &types.Generic{
+		record.Payload = &generic.Payload{
 			Payload: []byte(payload),
 		}
 	case ndef.NFCForumExternalType:
-		record.Payload = &types.Generic{
+		record.Payload = &generic.Payload{
 			Payload: []byte(payload),
 		}
 	}
