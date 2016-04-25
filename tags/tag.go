@@ -23,7 +23,7 @@ import (
 	"github.com/hsanjuan/go-nfctype4/apdu"
 )
 
-// Tag represents a software implementation of a NFC Type 4 Tag.
+// Tag represents a software implementation of an NFC Type 4 Tag.
 // The communication between the Devices and the Tags is performed
 // via APDUs, with Command APDUs being received and answered with
 // Response APDUs.
@@ -33,7 +33,7 @@ import (
 // It falls withing the Tag implementation to be consistent with the
 // specification. The modules under nfctype4/tags offer examples of Tags.
 //
-// The `nfctype4/drivers/swtag` driver provides the binary interface
+// The `nfctype4/drivers/swtag` driver provides binary communication
 // for software tags. Check the `swtag` documentation to get an overview
 // of its different applications.
 type Tag interface {

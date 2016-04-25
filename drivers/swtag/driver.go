@@ -28,15 +28,14 @@ import (
 )
 
 // Driver implements a CommandDriver to interface with a software tag
-// (something that implements the Tag interface).
+// (something that implements the Tag interface from the tags module).
 //
-// This means that this driver provides the binary interface to those tags
-// and as such, offers several interesting applications.
+// This means that this driver provides the binary channel to those tags.
 //
-// The first one is to easily test that a software Tag conforms to the
-// NFC Type 4 Tag specification, by attaching this driver to a `Device` with
-// `Device.Setup(CommandDriver)`, and performing the Device operations on the
-// Tag.
+// Among its applications, is the easily test that a software Tag
+//  conforms to the NFC Type 4 Tag specification, by attaching this
+// driver to a `nfctype4.Device` with, and performing the Device
+// operations on the Tag.
 //
 // The second application is to simulate a NFC Type 4 with a hardware
 // NFC reader. Libnfc, for example, allows to initialize NFC Readers in

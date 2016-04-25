@@ -24,12 +24,10 @@
 // The `Device` type offers functionality to perform `Read` and `Update`
 // on NFC Type 4 Tags.
 //
-// The `Tag` type allows in turn to implement software-based tags. An
-// static version of a software tag is provided with 'tags/static'.
 //
 // The bridge between the `Device` and the hardware is covered by the
-// `libnfc4/drivers/*`, which implement the `CommandDriver` interface.
-// A `libnfc` driver is provided, which allows working with any
+// modules in `libnfc4/drivers/*`, which implement the `CommandDriver`
+// interface. A `libnfc` driver is provided, which allows working with any
 // libnfc-supported hardware.
 //
 // nfctype4 tries to be strict when parsing and serializing
