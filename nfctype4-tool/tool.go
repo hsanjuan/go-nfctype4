@@ -22,10 +22,14 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"github.com/hsanjuan/go-ndef"
+	"github.com/hsanjuan/go-ndef/types/absoluteuri"
+	"github.com/hsanjuan/go-ndef/types/ext"
 	"github.com/hsanjuan/go-ndef/types/generic"
+	"github.com/hsanjuan/go-ndef/types/media"
 	"github.com/hsanjuan/go-ndef/types/wkt/text"
 	"github.com/hsanjuan/go-ndef/types/wkt/uri"
 	"github.com/hsanjuan/go-nfctype4"
@@ -37,20 +41,20 @@ import (
 const Description = `
 go-nfctype4-tool allows to easily read and write NFC Forum Type 4 Tags.
 
-The tool attempts to provide a readable message on stdout when the contents
-of the NDEF message can be interpreted. Otherwise, an explanatory message is
-shown. The raw contents of the NDEF file can be printed with the -raw
-flag in all cases.
+Read operations will return the value read from the tag. If the -raw
+flag is not specified, the program tries to produce a printable output
+for the NDEF Message.
 
-The payload for writing can be provided directly as an argument or via stdin.
-Note that the type is set by default to Text, but the specific format can be
-edited with the -tnf and -type flags.
+Write operations can take the payload as a command line argument or read
+it from a file. The TNF and Type fields can be controlled with their respective
+flags.
 
 `
 
 // Command line flags
 var (
 	driverFlag string
+	fileFlag   string
 	rawFlag    bool
 	tnfFlag    string
 	typeFlag   string
@@ -73,19 +77,34 @@ func init() {
 		flag.PrintDefaults()
 		fmt.Fprintln(os.Stderr)
 	}
+	flag.StringVar(&fileFlag, "file", "",
+		"Read the payload from file (takes precedence over the payload argument)")
 	flag.StringVar(&driverFlag, "driver", "libnfc",
 		"available drivers: libnfc")
+	flag.StringVar(&writeFlag, "output", "",
+		"Write output to path")
 	flag.BoolVar(&rawFlag, "raw", false, "Output raw NDEF File contents")
 	flag.StringVar(&tnfFlag, "tnf", "wkt",
 		"Type Name Format: "+
-			"wkt, "+
-			"ext, "+
-			"media")
+			"wkt (Well-Known), "+
+			"ext (External), "+
+			"media (MIME)")
 	flag.StringVar(&typeFlag, "type", "T",
 		"The type of the message. Defaults to T[text]")
-	flag.StringVar(&writeFlag, "write", "",
-		"Write output to path")
 	flag.Parse()
+}
+
+func argError(msg string) {
+	fmt.Fprint(os.Stderr, msg+"\n\n")
+	flag.Usage()
+	os.Exit(2)
+}
+
+func check(e error) {
+	if e != nil {
+		fmt.Fprintln(os.Stderr, e)
+		os.Exit(1)
+	}
 }
 
 func main() {
@@ -97,14 +116,12 @@ func main() {
 		doWrite()
 	case "format":
 		doFormat()
+	case "inspect":
+		doInspect()
 	case "":
-		fmt.Fprintf(os.Stderr, "Command argument is missing.\n\n")
-		flag.Usage()
-		os.Exit(2)
+		argError("Command argument is missing.")
 	default:
-		fmt.Fprintf(os.Stderr, "Unrecognized command %s.\n\n", cmd)
-		flag.Usage()
-		os.Exit(2)
+		argError("Unrecognized command " + cmd)
 	}
 }
 
@@ -113,8 +130,7 @@ func selectDriver() nfctype4.CommandDriver {
 	case "libnfc":
 		return new(libnfc.Driver)
 	default:
-		fmt.Fprintf(os.Stderr, "Error: invalid driver selected.\n\n")
-		os.Exit(2)
+		argError("Error: invalid driver selected.")
 	}
 	return nil
 }
@@ -129,10 +145,7 @@ func makeDevice() *nfctype4.Device {
 func doRead() {
 	device := makeDevice()
 	ndefMessage, err := device.Read()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+	check(err)
 
 	if rawFlag {
 		var buf bytes.Buffer
@@ -146,9 +159,17 @@ func doRead() {
 }
 
 func doWrite() {
-	payload := flag.Arg(1)
-	if payload == "" {
-		fmt.Fprintf(os.Stderr, "Write operation needs a payload.\n\n")
+	var payload []byte
+
+	if fileFlag == "" {
+		payload = []byte(flag.Arg(1))
+		if len(payload) == 0 {
+			argError("Write operation needs a payload or --file.")
+		}
+	} else {
+		var err error
+		payload, err = ioutil.ReadFile(fileFlag)
+		check(err)
 	}
 	device := makeDevice()
 
@@ -163,54 +184,46 @@ func doWrite() {
 	case ndef.NFCForumWellKnownType:
 		switch typeFlag {
 		case "U":
-			record.Payload = uri.New(payload)
+			record.Payload = uri.New(string(payload))
 		case "T":
-			record.Payload = text.New(payload, "en")
+			record.Payload = text.New(string(payload), "en")
 		default:
 			record.Payload = &generic.Payload{
 				Payload: []byte(payload),
 			}
 		}
+	case ndef.AbsoluteURI:
+		record.Payload = absoluteuri.New(typeFlag, payload)
 	case ndef.MediaType:
-		record.Payload = &generic.Payload{
-			Payload: []byte(payload),
-		}
+		record.Payload = media.New(typeFlag, payload)
 	case ndef.NFCForumExternalType:
-		record.Payload = &generic.Payload{
-			Payload: []byte(payload),
-		}
+		record.Payload = ext.New(typeFlag, payload)
 	}
 	msg.Records[0] = record
 
 	err := device.Update(msg)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	} else {
-		fmt.Println("Updated successful.")
-	}
+	check(err)
+	fmt.Println("Updated successful.")
 }
 
 func doFormat() {
 	device := makeDevice()
 	err := device.Format()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	} else {
-		fmt.Println("Format operation successful.")
-	}
+	check(err)
+	fmt.Println("Format operation successful.")
+}
+
+func doInspect() {
+	device := makeDevice()
+	ndefMessage, err := device.Read()
+	check(err)
+	output([]byte(ndefMessage.Inspect()))
 }
 
 func output(t []byte) {
 	if writeFlag != "" {
-		file, err := os.Create(writeFlag)
-		defer file.Close()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		file.Write(t)
+		err := ioutil.WriteFile(writeFlag, t, 0644)
+		check(err)
 	} else {
 		fmt.Println(string(t))
 	}
@@ -224,9 +237,10 @@ func tnfToCode(tnf string) byte {
 		return ndef.NFCForumExternalType
 	case "media":
 		return ndef.MediaType
+	case "uri":
+		return ndef.AbsoluteURI
 	default:
-		fmt.Fprintln(os.Stderr, "Error: non-supported TNF provided")
-		os.Exit(2)
+		argError("Error: non-supported TNF provided")
 	}
 	return 0
 }

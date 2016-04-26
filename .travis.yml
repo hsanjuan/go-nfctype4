@@ -13,6 +13,9 @@ install:
   - go get github.com/hsanjuan/go-ndef/types/generic
   - go get github.com/hsanjuan/go-ndef/types/wkt/text
   - go get github.com/hsanjuan/go-ndef/types/wkt/uri
+  - go get github.com/hsanjuan/go-ndef/types/ext
+  - go get github.com/hsanjuan/go-ndef/types/absoluteuri
+  - go get github.com/hsanjuan/go-ndef/types/media
   - go get github.com/fuzxxl/nfc/2.0/nfc
 script:
   - go test -v ./... && ./coverage.sh
