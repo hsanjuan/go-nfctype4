@@ -20,6 +20,8 @@ nfctype4-tool
 
 You can then run `nfctype4-tool -h` to get going.
 
+Note: to turn a Mifare Desfire EV2 (4k) card into an NFC Type 4 Tag check: https://gitlab.com/snippets/18476 .
+
 Packages
 --------
 
