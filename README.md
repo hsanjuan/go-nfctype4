@@ -7,16 +7,16 @@ Go-nfctype4
 
 Package `go-nfctype4` implements the NFC Forum Type 4 Tag Operation Specification Version 2.0.
 
-The implementation acts as an NFC Forum Device (an entity that can read and write NFC Forum Tags). For such. it provides a `Device` type which can `Read`, `Update` and `Format` NFC tags.
+The implementation acts as an NFC Forum Device (an application that can read and write NFC Forum Tags) via a provided `Device` type which can perform `Read`, `Update` and `Format` operations.
 
-The module and submodules contain all the pieces to impelment software-based NFC Type 4 Tags as well. For more information about this check the documentation. You can also check out this [snippet](https://gitlab.com/snippets/18718) showing how this is done using the static tag implementation provided.
+The module and submodules contain all the pieces to implement software-based NFC Type 4 Tags as well. For more information about this check the documentation. You can also check out this [snippet](https://gitlab.com/snippets/18718) showing how this is done using the static tag implementation provided.
 
 nfctype4-tool
 -------------
 
 `nfctype4-tool` is a command-line tool to read and write NFC Type 4 tags. It can be installed with:
 
-`go install github.com/hsanjuan/go-nfctype4/nfctype4-tool`
+`go get -u github.com/hsanjuan/go-nfctype4/nfctype4-tool`
 
 You can then run `nfctype4-tool -h` to get going.
 
