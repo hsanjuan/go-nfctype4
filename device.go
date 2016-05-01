@@ -27,7 +27,7 @@ import (
 	"github.com/hsanjuan/go-nfctype4/helpers"
 )
 
-// Device represents an NFC Forum device, that is, an entity
+// Device represents an NFC Forum device, that is, an application
 // which allows to perform Read and Update operations on a NFC Type 4 Tag,
 // by following the operation instructions stated in the specification.
 //
