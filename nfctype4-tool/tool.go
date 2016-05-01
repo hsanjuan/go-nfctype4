@@ -137,8 +137,7 @@ func selectDriver() nfctype4.CommandDriver {
 
 func makeDevice() *nfctype4.Device {
 	driver := selectDriver()
-	device := new(nfctype4.Device)
-	device.Setup(driver)
+	device := nfctype4.New(driver)
 	return device
 }
 

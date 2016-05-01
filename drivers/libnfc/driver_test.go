@@ -29,9 +29,8 @@ func ExampleDevice_Read_libnfcCommandDriver() {
 	// Before running, make sure that the NFC reader device
 	// is detected by libnfc and that the tag is in contact
 	// with the device as it will be read right away or fail.
-	driver := new(Driver) // Set Driver to LibNFC
-	device := new(nfctype4.Device)
-	device.Setup(driver)
+	driver := new(Driver)
+	device := nfctype4.New(driver)
 	message, err := device.Read() // Read the tag
 	if err != nil {
 		fmt.Println(err)

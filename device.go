@@ -32,13 +32,13 @@ import (
 // by following the operation instructions stated in the specification.
 //
 // Interaction with physical and software Tags is done via CommandDrivers.
-// A device needs to be Setup() before use with a CommandDriver which is
+// A device is configured with a CommandDriver which is
 // in charge of sending and receiving bytes from the Tags.
 // The `nfctype4/drivers/libnfc` driver, for example, supports using a
 // libnfc-supported reader to talk to a real NFC Type 4 Tag.
 type Device struct {
-	MajorVersion byte // unused
-	MinorVersion byte // unused
+	MajorVersion byte // 2
+	MinorVersion byte // 0
 	commander    *Commander
 }
 
@@ -52,7 +52,20 @@ type tagState struct {
 	ReadOnly           bool
 }
 
-// Setup makes configures this device to use the provided
+// New returns a pointer to a new Device configured
+// with the provided CommandDriver to perform
+// operations on the Tags.
+func New(cmdDriver CommandDriver) *Device {
+	return &Device{
+		MajorVersion: NFCForumMajorVersion,
+		MinorVersion: NFCForumMinorVersion,
+		commander: &Commander{
+			Driver: cmdDriver,
+		},
+	}
+}
+
+// Setup [re]configures this device to use the provided
 // command driver to perform operations on the tags.
 func (dev *Device) Setup(cmdDriver CommandDriver) {
 	dev.commander = &Commander{
@@ -141,8 +154,8 @@ func (dev *Device) Read() (*ndef.Message, error) {
 // Note that update cannot be used to format a tag (clear the
 // NDEF Message). For that, use Format().
 //
-// Update returns an error when there is a problem in some of the
-// steps.
+// Update returns an error when there is a problem at some point
+// in the process.
 func (dev *Device) Update(m *ndef.Message) error {
 	if err := dev.checkReady(); err != nil {
 		return err
@@ -220,6 +233,13 @@ func (dev *Device) Update(m *ndef.Message) error {
 // Format performs an update operation which erases a tag.
 // It does this by writing to the first two bytes of the NDEF File
 // and setting their value to 0 (zero-length for the file).
+//
+// Be aware that the memory is not wiped or overwritten. An attacker
+// may likely recover the values stored in the tag by resetting
+// the length of the NDEF File to the maximum.
+//
+// To wipe the memory, issue an Update() with a Message of the maximum
+// length supported by the tag and a randomized/meaningless payload.
 //
 // Format returns an error when a problem happens.
 func (dev *Device) Format() error {

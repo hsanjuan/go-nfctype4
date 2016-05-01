@@ -17,6 +17,9 @@
 
 // Package static provides the implementation of a static software-based
 // NFC Forum Type 4 Tag which holds a NDEF Message.
+//
+// See https://gitlab.com/snippets/18718 for an example on how to use it
+// together with the `swtag` driver.
 package static
 
 import (
@@ -87,8 +90,11 @@ func (tag *Tag) Initialize() {
 		CCLEN: 15,
 		MappingVersion: byte(NFCForumMajorVersion)<<4 |
 			byte(NFCForumMinorVersion),
-		MLe: 0x00FF, // We could put more... or less
-		MLc: 0x00FF,
+		// FIXME: This is actually important and should
+		// stay below the maximum frame values specified in
+		// the RATs command
+		MLe: 0x000F, // We could put more... or less
+		MLc: 0x000F,
 		NDEFFileControlTLV: &capabilitycontainer.NDEFFileControlTLV{
 			T:                        0x04,
 			L:                        0x06,

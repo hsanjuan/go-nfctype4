@@ -126,35 +126,53 @@ var dummyTestSetsBad = map[string][][]byte{
 	},
 }
 
-func ExampleDevice_Read_dummy() {
-	// This example uses the dummy.Driver, but
-	// is exactly the same with the
-	// libnfc.Driver, and would allow you to read
-	// your Yubikey directly with your libnfc-device
-	dummyDriver := &dummy.Driver{
-		// ReceiveBytes should be set in the dummy so there is
-		// something to answer. In this case, we simulate
-		// a Yubikey.
-		ReceiveBytes: dummyTestSets["yubikey_ok"],
+func mockDriver() CommandDriver {
+	yubikeyMock := static.New()
+	yubikeyMock.SetMessage(ndef.NewURIMessage("https://my.yubico.com/neo/cccccccccccccccccccccccccccccccccccccccccccc"))
+	return &swtag.Driver{
+		Tag: yubikeyMock,
 	}
-	device := new(Device)
-	device.Setup(dummyDriver) // This device will use the dummyDriver
+}
+
+func ExampleDevice_Read() {
+	// For libnfc, use "&libnfc.Driver{} instead of mockDriver()"
+	driver := mockDriver()
+	device := New(driver)
 	message, err := device.Read()
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		// Since Yubikeys provide a type 'U' NDEF
-		// message, we can print the url like this
 		fmt.Println(message)
+		// To obtain the message payload only:
+		fmt.Println(message.Records[0].Payload)
 	}
 	// Output:
 	// urn:nfc:wkt:U:https://my.yubico.com/neo/cccccccccccccccccccccccccccccccccccccccccccc
+	// https://my.yubico.com/neo/cccccccccccccccccccccccccccccccccccccccccccc
+}
+
+func ExampleDevice_Update() {
+	// For libnfc, use "&libnfc.Driver{} instead of mockDriver()"
+	driver := mockDriver()
+	device := New(driver)
+	message := ndef.NewTextMessage("Hey this is a test!", "en")
+	err := device.Update(message)
+	if err != nil {
+		fmt.Println(err)
+	}
+	readMsg, err := device.Read()
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(readMsg)
+	}
+	// Output:
+	// urn:nfc:wkt:T:Hey this is a test!
 }
 
 func TestRead_goodExamples(t *testing.T) {
 	dummyDriver := new(dummy.Driver)
-	device := new(Device)
-	device.Setup(dummyDriver)
+	device := New(dummyDriver)
 	for name, byteSet := range dummyTestSets {
 		t.Log("Testing:", name)
 		dummyDriver.ReceiveBytes = byteSet
@@ -184,12 +202,11 @@ func TestRead_badExamples(t *testing.T) {
 		"ndef_file_read_error":                 "Commander.ReadBinary: Error. SW1: 00h. SW2: 00h",
 		"ndef_file_bad_record":                 "checkChunks: A single record cannot have the Chunk flag set",
 	}
-	device := new(Device)
 	for name, byteSet := range dummyTestSetsBad {
 		dummyDriver := &dummy.Driver{
 			ReceiveBytes: byteSet,
 		}
-		device.Setup(dummyDriver)
+		device := New(dummyDriver)
 		t.Log("Testing:", name)
 		_, err := device.Read()
 		if err != nil {
@@ -212,8 +229,7 @@ func TestUpdate(t *testing.T) {
 	driver := &swtag.Driver{
 		Tag: tag,
 	}
-	device := new(Device)
-	device.Setup(driver)
+	device := New(driver)
 
 	// First test with a very simple message
 	simpleMsg := ndef.NewURIMessage("url.com")
@@ -271,8 +287,8 @@ func TestFormat(t *testing.T) {
 	driver := &swtag.Driver{
 		Tag: tag,
 	}
-	device := new(Device)
-	device.Setup(driver)
+
+	device := New(driver)
 
 	// Format the tag
 	err := device.Format()

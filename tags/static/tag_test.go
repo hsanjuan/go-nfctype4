@@ -18,7 +18,6 @@
 package static
 
 import (
-	//	"testing"
 	"fmt"
 
 	"github.com/hsanjuan/go-ndef"
@@ -46,8 +45,7 @@ func ExampleTag_read() {
 		Tag: tag,
 	}
 
-	device := &nfctype4.Device{}
-	device.Setup(driver)
+	device := nfctype4.New(driver)
 
 	// Now we can read the message using the NFC Type 4 Tag
 	// operation specification
@@ -72,8 +70,7 @@ func ExampleTag_write() {
 		Tag: tag,
 	}
 
-	device := &nfctype4.Device{}
-	device.Setup(driver)
+	device := nfctype4.New(driver)
 
 	// Now we can update the message using the NFC Type 4 Tag
 	// operation specification with a new message

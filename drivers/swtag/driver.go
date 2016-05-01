@@ -33,7 +33,7 @@ import (
 // This means that this driver provides the binary channel to those tags.
 //
 // Among its applications, is the easily test that a software Tag
-//  conforms to the NFC Type 4 Tag specification, by attaching this
+// conforms to the NFC Type 4 Tag specification, by attaching this
 // driver to a `nfctype4.Device` with, and performing the Device
 // operations on the Tag.
 //
@@ -42,6 +42,9 @@ import (
 // Target mode, where the Libnfc device behaves like a tag rather than
 // a reader. This driver makes it trivial to provide a libnfc device in
 // Target mode with full-fledged Type 4 Tag behaviour.
+//
+// An example of how this is done can be seen visiting the following
+// snippet: https://gitlab.com/snippets/18718
 type Driver struct {
 	Tag tags.Tag
 }
