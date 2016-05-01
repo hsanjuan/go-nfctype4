@@ -126,28 +126,48 @@ var dummyTestSetsBad = map[string][][]byte{
 	},
 }
 
-func ExampleDevice_Read_dummy() {
-	// This example uses the dummy.Driver, but
-	// is exactly the same with the
-	// libnfc.Driver, and would allow you to read
-	// your Yubikey directly with your libnfc-device
-	dummyDriver := &dummy.Driver{
-		// ReceiveBytes should be set in the dummy so there is
-		// something to answer. In this case, we simulate
-		// a Yubikey.
-		ReceiveBytes: dummyTestSets["yubikey_ok"],
+func mockDriver() CommandDriver {
+	yubikeyMock := static.New()
+	yubikeyMock.SetMessage(ndef.NewURIMessage("https://my.yubico.com/neo/cccccccccccccccccccccccccccccccccccccccccccc"))
+	return &swtag.Driver{
+		Tag: yubikeyMock,
 	}
-	device := New(dummyDriver)
+}
+
+func ExampleDevice_Read() {
+	// For libnfc, use "&libnfc.Driver{} instead of mockDriver()"
+	driver := mockDriver()
+	device := New(driver)
 	message, err := device.Read()
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		// Since Yubikeys provide a type 'U' NDEF
-		// message, we can print the url like this
 		fmt.Println(message)
+		// To obtain the message payload only:
+		fmt.Println(message.Records[0].Payload)
 	}
 	// Output:
 	// urn:nfc:wkt:U:https://my.yubico.com/neo/cccccccccccccccccccccccccccccccccccccccccccc
+	// https://my.yubico.com/neo/cccccccccccccccccccccccccccccccccccccccccccc
+}
+
+func ExampleDevice_Update() {
+	// For libnfc, use "&libnfc.Driver{} instead of mockDriver()"
+	driver := mockDriver()
+	device := New(driver)
+	message := ndef.NewTextMessage("Hey this is a test!", "en")
+	err := device.Update(message)
+	if err != nil {
+		fmt.Println(err)
+	}
+	readMsg, err := device.Read()
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(readMsg)
+	}
+	// Output:
+	// urn:nfc:wkt:T:Hey this is a test!
 }
 
 func TestRead_goodExamples(t *testing.T) {
