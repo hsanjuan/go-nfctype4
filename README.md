@@ -9,7 +9,7 @@ Package `go-nfctype4` implements the NFC Forum Type 4 Tag Operation Specificatio
 
 The implementation acts as an NFC Forum Device (an entity that can read and write NFC Forum Tags). For such. it provides a `Device` type which can `Read`, `Update` and `Format` NFC tags.
 
-The module and submodules contain all the pieces to impelment software-based NFC Type 4 Tags as well. For more information about this check the documentation.
+The module and submodules contain all the pieces to impelment software-based NFC Type 4 Tags as well. For more information about this check the documentation. You can also check out this [snippet](https://gitlab.com/snippets/18718) showing how this is done using the static tag implementation provided.
 
 nfctype4-tool
 -------------

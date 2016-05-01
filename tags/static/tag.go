@@ -17,6 +17,9 @@
 
 // Package static provides the implementation of a static software-based
 // NFC Forum Type 4 Tag which holds a NDEF Message.
+//
+// See https://gitlab.com/snippets/18718 for an example on how to use it
+// together with the `swtag` driver.
 package static
 
 import (
