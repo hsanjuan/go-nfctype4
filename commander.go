@@ -31,8 +31,7 @@ import (
 // sends them to a CommandDriver.TransceiveBytes. The response is
 // de-serialized into a Response APDU and processed.
 type Commander struct {
-	// Driver is the CommandDriver in charge of communicating with the
-	// NFC device.
+	// Driver is the CommandDriver in charge of communicating with the tags.
 	Driver CommandDriver
 }
 

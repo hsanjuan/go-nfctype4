@@ -37,8 +37,8 @@ import (
 // The `nfctype4/drivers/libnfc` driver, for example, supports using a
 // libnfc-supported reader to talk to a real NFC Type 4 Tag.
 type Device struct {
-	MajorVersion byte // unused
-	MinorVersion byte // unused
+	MajorVersion byte // 2
+	MinorVersion byte // 0
 	commander    *Commander
 }
 
