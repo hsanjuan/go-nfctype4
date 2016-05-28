@@ -28,6 +28,9 @@ import (
 	"github.com/fuzxxl/nfc/2.0/nfc"
 )
 
+// BUG(hector): Driver Modulation is hardcoded and cannot be specified by
+// the user.
+
 // Driver implements the CommandDriver interface allowing `Device` to
 // use any libnfc-supported hardware to communicate with a real NFC Tag.
 //
