@@ -39,7 +39,7 @@ import (
 // Description provides a description of the functionality of the tool
 // for --help output.
 const Description = `
-go-nfctype4-tool allows to easily read and write NFC Forum Type 4 Tags.
+nfctype4-tool allows to easily read and write NFC Forum Type 4 Tags.
 
 Read operations will return the value read from the tag. If the -raw
 flag is not specified, the program tries to produce a printable output
@@ -64,7 +64,7 @@ var (
 func init() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr,
-			"Usage: go-nfctype4-tool "+
+			"Usage: nfctype4-tool "+
 				"[options] <inspect|read|write|format> [payload]\n")
 		fmt.Fprintf(os.Stderr, Description)
 

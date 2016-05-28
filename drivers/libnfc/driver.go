@@ -28,6 +28,9 @@ import (
 	"github.com/fuzxxl/nfc/2.0/nfc"
 )
 
+// BUG(hector): Driver Modulation is hardcoded and cannot be specified by
+// the user.
+
 // Driver implements the CommandDriver interface allowing `Device` to
 // use any libnfc-supported hardware to communicate with a real NFC Tag.
 //
@@ -54,7 +57,7 @@ type Driver struct {
 //
 // It returns an error when some step fails.
 func (driver *Driver) Initialize() error {
-	driver.Modulation = nfc.Modulation{Type: nfc.ISO14443a, BaudRate: nfc.Nbr212}
+	driver.Modulation = nfc.Modulation{Type: nfc.ISO14443a, BaudRate: nfc.Nbr106}
 
 	deviceList, err := nfc.ListDevices()
 	if err != nil {
