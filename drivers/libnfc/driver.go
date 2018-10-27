@@ -28,6 +28,13 @@ import (
 	"github.com/fuzxxl/nfc/2.0/nfc"
 )
 
+// Common errors
+var (
+	ErrNoDevicesDetected         = errors.New("no nfc devices detected")
+	ErrRequestedDeviceNotPresent = errors.New("requested nfc device not present")
+	ErrNoTargetsDetected         = errors.New("no targets detected.")
+)
+
 // BUG(hector): Driver Modulation is hardcoded and cannot be specified by
 // the user.
 
@@ -66,13 +73,10 @@ func (driver *Driver) Initialize() error {
 	driver.deviceList = deviceList
 
 	if len(deviceList) == 0 {
-		return errors.New("Driver.Initialize: " +
-			"no libnfc devices detected.")
+		return ErrNoDevicesDetected
 	}
 	if len(deviceList) <= driver.DeviceNumber {
-		return fmt.Errorf("Driver.Initialize: "+
-			"libnfc does not provide device %d.",
-			driver.DeviceNumber)
+		return ErrRequestedDeviceNotPresent
 	}
 	device, err := nfc.Open(deviceList[driver.DeviceNumber])
 	if err != nil {
@@ -88,8 +92,7 @@ func (driver *Driver) Initialize() error {
 	var targets []nfc.Target
 	targets, err = driver.device.InitiatorListPassiveTargets(driver.Modulation)
 	if len(targets) == 0 {
-		return errors.New("Driver.Initialize: " +
-			"no targets detected. Place tag on reader and retry.")
+		return ErrNoTargetsDetected
 	}
 	driver.target = targets[0].(*nfc.ISO14443aTarget)
 
