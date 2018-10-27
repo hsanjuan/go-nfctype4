@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/hsanjuan/go-ndef"
 	"github.com/hsanjuan/go-ndef/types/absoluteuri"
@@ -59,7 +60,10 @@ var (
 	tnfFlag    string
 	typeFlag   string
 	writeFlag  string
+	wait       bool
 )
+
+var waitDelay = 200 * time.Millisecond
 
 func init() {
 	flag.Usage = func() {
@@ -81,6 +85,7 @@ func init() {
 		"Read the payload from file (takes precedence over the payload argument)")
 	flag.StringVar(&driverFlag, "driver", "libnfc",
 		"available drivers: libnfc")
+	flag.BoolVar(&wait, "wait", false, "Wait for the reader to detect the tag when not present")
 	flag.StringVar(&writeFlag, "output", "",
 		"Write output to path")
 	flag.BoolVar(&rawFlag, "raw", false, "Output raw NDEF File contents")
@@ -109,19 +114,29 @@ func check(e error) {
 
 func main() {
 	cmd := flag.Arg(0)
-	switch cmd {
-	case "read":
-		doRead()
-	case "write":
-		doWrite()
-	case "format":
-		doFormat()
-	case "inspect":
-		doInspect()
-	case "":
-		argError("Command argument is missing.")
-	default:
-		argError("Unrecognized command " + cmd)
+	var err error
+	for {
+		switch cmd {
+		case "read":
+			err = doRead()
+		case "write":
+			err = doWrite()
+		case "format":
+			err = doFormat()
+		case "inspect":
+			err = doInspect()
+		case "":
+			argError("Command argument is missing.")
+		default:
+			argError("Unrecognized command " + cmd)
+		}
+
+		if err == libnfc.ErrNoTargetsDetected {
+			time.Sleep(waitDelay)
+			continue
+		}
+		check(err)
+		return
 	}
 }
 
@@ -141,10 +156,12 @@ func makeDevice() *nfctype4.Device {
 	return device
 }
 
-func doRead() {
+func doRead() error {
 	device := makeDevice()
 	ndefMessage, err := device.Read()
-	check(err)
+	if err != nil {
+		return err
+	}
 
 	if rawFlag {
 		var buf bytes.Buffer
@@ -155,9 +172,10 @@ func doRead() {
 	} else {
 		output([]byte(ndefMessage.String()))
 	}
+	return nil
 }
 
-func doWrite() {
+func doWrite() error {
 	var payload []byte
 
 	if fileFlag == "" {
@@ -168,7 +186,9 @@ func doWrite() {
 	} else {
 		var err error
 		payload, err = ioutil.ReadFile(fileFlag)
-		check(err)
+		if err != nil {
+			return err
+		}
 	}
 	device := makeDevice()
 
@@ -201,22 +221,31 @@ func doWrite() {
 	msg.Records[0] = record
 
 	err := device.Update(msg)
-	check(err)
+	if err != nil {
+		return err
+	}
 	fmt.Println("Updated successful.")
+	return nil
 }
 
-func doFormat() {
+func doFormat() error {
 	device := makeDevice()
 	err := device.Format()
-	check(err)
+	if err != nil {
+		return err
+	}
 	fmt.Println("Format operation successful.")
+	return nil
 }
 
-func doInspect() {
+func doInspect() error {
 	device := makeDevice()
 	ndefMessage, err := device.Read()
-	check(err)
+	if err != nil {
+		return err
+	}
 	output([]byte(ndefMessage.Inspect()))
+	return nil
 }
 
 func output(t []byte) {
