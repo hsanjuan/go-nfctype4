@@ -1,0 +1,16 @@
+{
+  "author": "hector",
+  "bugs": {
+    "url": "https://github.com/hsanjuan/go-nfctype4"
+  },
+  "gx": {
+    "dvcsimport": "github.com/hsanjuan/go-nfctype4"
+  },
+  "gxVersion": "0.14.0",
+  "language": "go",
+  "license": "LPGL-3.0",
+  "name": "go-nfctype4",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.0.0"
+}
+
