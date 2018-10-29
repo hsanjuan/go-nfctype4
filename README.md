@@ -1,9 +1,9 @@
 Go-nfctype4
 ===========
 
-| Master/stable | Unstable | Reference |
-|:-------------:|:--------:|:---------:|
-| [![Build Status](https://travis-ci.org/hsanjuan/go-nfctype4.svg?branch=master)](https://travis-ci.org/hsanjuan/go-nfctype4) [![Coverage Status](https://coveralls.io/repos/github/hsanjuan/go-nfctype4/badge.svg?branch=master)](https://coveralls.io/github/hsanjuan/go-nfctype4?branch=master) | [![Build Status](https://travis-ci.org/hsanjuan/go-nfctype4.svg?branch=unstable)](https://travis-ci.org/hsanjuan/go-nfctype4) [![Coverage Status](https://coveralls.io/repos/github/hsanjuan/go-nfctype4/badge.svg?branch=unstable)](https://coveralls.io/github/hsanjuan/go-nfctype4?branch=unstable) | [![GoDoc](https://godoc.org/github.com/hsanjuan/go-nfctype4?status.svg)](http://godoc.org/github.com/hsanjuan/go-nfctype4) |
+[![Build Status](https://travis-ci.org/hsanjuan/go-nfctype4.svg?branch=master)](https://travis-ci.org/hsanjuan/go-nfctype4)
+[![Coverage Status](https://coveralls.io/repos/github/hsanjuan/go-nfctype4/badge.svg?branch=master)](https://coveralls.io/github/hsanjuan/go-nfctype4?branch=master)
+[![GoDoc](https://godoc.org/github.com/hsanjuan/go-nfctype4?status.svg)](http://godoc.org/github.com/hsanjuan/go-nfctype4)
 
 Package `go-nfctype4` implements the NFC Forum Type 4 Tag Operation Specification Version 2.0.
 
