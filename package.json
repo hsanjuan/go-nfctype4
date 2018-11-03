@@ -6,6 +6,20 @@
   "gx": {
     "dvcsimport": "github.com/hsanjuan/go-nfctype4"
   },
+  "gxDependencies": [
+    {
+      "author": "hsanjuan",
+      "hash": "QmNVBea7DR5bw1n3GScTntaNoH1UuQ7YGPnBVdEayKwJQZ",
+      "name": "go-ndef",
+      "version": "0.0.0"
+    },
+    {
+      "author": "hsanjuan",
+      "hash": "QmZAka7vTroHRpmvpeZzRhh7GvE6ps4sEgjwcYXLPcU7vz",
+      "name": "nfc",
+      "version": "2.0.2"
+    }
+  ],
   "gxVersion": "0.14.0",
   "language": "go",
   "license": "LPGL-3.0",
