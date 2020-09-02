@@ -166,7 +166,11 @@ func doRead() error {
 	if rawFlag {
 		var buf bytes.Buffer
 		for _, r := range ndefMessage.Records {
-			buf.Write(r.Payload.Marshal())
+			pl, err := r.Payload()
+			if err != nil {
+				return err
+			}
+			buf.Write(pl.Marshal())
 		}
 		output(buf.Bytes())
 	} else {
@@ -194,30 +198,30 @@ func doWrite() error {
 
 	msg := new(ndef.Message)
 	msg.Records = make([]*ndef.Record, 1)
-	record := &ndef.Record{
-		TNF:  tnfToCode(tnfFlag),
-		Type: typeFlag,
-	}
+	var recordPayload ndef.RecordPayload
 
 	switch tnfToCode(tnfFlag) {
 	case ndef.NFCForumWellKnownType:
 		switch typeFlag {
 		case "U":
-			record.Payload = uri.New(string(payload))
+			recordPayload = uri.New(string(payload))
 		case "T":
-			record.Payload = text.New(string(payload), "en")
+			recordPayload = text.New(string(payload), "en")
 		default:
-			record.Payload = &generic.Payload{
+			recordPayload = &generic.Payload{
 				Payload: []byte(payload),
 			}
 		}
 	case ndef.AbsoluteURI:
-		record.Payload = absoluteuri.New(typeFlag, payload)
+		recordPayload = absoluteuri.New(typeFlag, payload)
 	case ndef.MediaType:
-		record.Payload = media.New(typeFlag, payload)
+		recordPayload = media.New(typeFlag, payload)
 	case ndef.NFCForumExternalType:
-		record.Payload = ext.New(typeFlag, payload)
+		recordPayload = ext.New(typeFlag, payload)
 	}
+
+	record := ndef.NewRecord(tnfToCode(tnfFlag), typeFlag, "", recordPayload)
+
 	msg.Records[0] = record
 
 	err := device.Update(msg)

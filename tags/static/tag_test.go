@@ -21,15 +21,19 @@ import (
 	"fmt"
 
 	"github.com/hsanjuan/go-ndef"
+	"github.com/hsanjuan/go-ndef/types/generic"
 	"github.com/hsanjuan/go-nfctype4"
 	"github.com/hsanjuan/go-nfctype4/drivers/swtag"
 )
 
 func ExampleTag_read() {
 	// Let's create a NDEF Message first
+	payload := generic.Payload{
+		Payload: []byte("\x01test.payload"),
+	}
 	ndefMessage := ndef.NewMessage(
 		ndef.NFCForumWellKnownType, "U", "",
-		[]byte("\x01test.payload"))
+		&payload)
 
 	// Store this message in a static tag
 	tag := New()

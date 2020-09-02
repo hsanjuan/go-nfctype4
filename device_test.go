@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/hsanjuan/go-ndef"
+	"github.com/hsanjuan/go-ndef/types/generic"
 	"github.com/hsanjuan/go-nfctype4/drivers/dummy"
 	"github.com/hsanjuan/go-nfctype4/drivers/swtag"
 	"github.com/hsanjuan/go-nfctype4/tags/static"
@@ -144,7 +145,8 @@ func ExampleDevice_Read() {
 	} else {
 		fmt.Println(message)
 		// To obtain the message payload only:
-		fmt.Println(message.Records[0].Payload)
+		payload, _ := message.Records[0].Payload()
+		fmt.Println(payload)
 	}
 	// Output:
 	// urn:nfc:wkt:U:https://my.yubico.com/neo/cccccccccccccccccccccccccccccccccccccccccccc
@@ -200,7 +202,7 @@ func TestRead_badExamples(t *testing.T) {
 		"ndef_file_zero_length":                "Device.Read: no NDEF Message detected.",
 		"device_invalid_state":                 "Device.Read: Device is not in a valid state",
 		"ndef_file_read_error":                 "Commander.ReadBinary: Error. SW1: 00h. SW2: 00h",
-		"ndef_file_bad_record":                 "checkChunks: A single record cannot have the Chunk flag set",
+		"ndef_file_bad_record":                 "NDEF Record Check: A single record cannot have the Chunk flag set",
 	}
 	for name, byteSet := range dummyTestSetsBad {
 		dummyDriver := &dummy.Driver{
@@ -236,39 +238,61 @@ func TestUpdate(t *testing.T) {
 
 	err := device.Update(simpleMsg)
 	if err != nil {
-		t.Error(err.Error())
+		t.Error(err)
 	}
 
 	readMsg, err := device.Read()
 	if err != nil {
-		t.Error(err.Error())
+		t.Error(err)
 	}
-	if !bytes.Equal(simpleMsg.Records[0].Payload.Marshal(),
-		readMsg.Records[0].Payload.Marshal()) {
+	simpleMsgPayload, err := simpleMsg.Records[0].Payload()
+	if err != nil {
+		t.Fatal(err)
+	}
+	readMsgPayload, err := readMsg.Records[0].Payload()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(simpleMsgPayload.Marshal(),
+		readMsgPayload.Marshal()) {
 		t.Error("Payloads don't match for simpleMsg")
 	}
 
 	// Now test with a very long size
-	longMsg := ndef.NewMessage(ndef.NFCForumWellKnownType, "U", "",
-		make([]byte, 0xFFE0))
+	var longMsgPayload ndef.RecordPayload = &generic.Payload{
+		Payload: []byte(make([]byte, 0xFFE0)),
+	}
+	longMsg := ndef.NewMessage(ndef.NFCForumWellKnownType, "local", "", longMsgPayload)
 	err = device.Update(longMsg)
 	if err != nil {
-		t.Error(err.Error())
+		t.Error(err)
 	}
 
 	readMsg, err = device.Read()
 	if err != nil {
-		t.Error(err.Error())
+		t.Error(err)
 	}
+
+	longMsgPayload, err = longMsg.Records[0].Payload()
+	if err != nil {
+		t.Fatal(err)
+	}
+	readMsgPayload, err = readMsg.Records[0].Payload()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	if !bytes.Equal(
-		longMsg.Records[0].Payload.Marshal(),
-		readMsg.Records[0].Payload.Marshal()) {
+		longMsgPayload.Marshal(),
+		readMsgPayload.Marshal()) {
 		t.Error("Payloads don't match for longMsg")
 	}
 
 	// Now test with a message over the maximum size
-	badMsg := ndef.NewMessage(ndef.NFCForumWellKnownType, "local", "",
-		make([]byte, 0xFFFE))
+	badMsgPayload := &generic.Payload{
+		Payload: []byte(make([]byte, 0xFFFE)),
+	}
+	badMsg := ndef.NewMessage(ndef.NFCForumWellKnownType, "local", "", badMsgPayload)
 	err = device.Update(badMsg)
 	if err == nil {
 		t.Error("Update with badMsg should have failed")
@@ -293,7 +317,7 @@ func TestFormat(t *testing.T) {
 	// Format the tag
 	err := device.Format()
 	if err != nil {
-		t.Error(err.Error())
+		t.Error(err)
 	}
 
 	// Try to read
@@ -302,7 +326,7 @@ func TestFormat(t *testing.T) {
 		t.Error("Reading from an empty tag should have failed")
 	} else {
 		if err.Error() != "Device.Read: no NDEF Message detected." {
-			t.Error("Unexpected error happened: ", err.Error())
+			t.Error("Unexpected error happened: ", err)
 		}
 	}
 }
