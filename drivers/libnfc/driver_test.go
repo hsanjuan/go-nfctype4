@@ -1,7 +1,7 @@
 // +build !nolibnfc
 
 /***
-    Copyright (c) 2016, Hector Sanjuan
+    Copyright (c) 2020, Hector Sanjuan
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
