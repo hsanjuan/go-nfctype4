@@ -5,7 +5,13 @@ go:
   - go1.15.x
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y libnfc-dev
+  - sudo apt-get install -y libusb-dev
+  - wget https://github.com/nfc-tools/libnfc/releases/download/libnfc-1.8.0/libnfc-1.8.0.tar.bz2
+  - tar -xf libnfc-1.8.0.tar.bz2
+  - cd libnfc-1.8.0
+  - ./configure --prefix=/usr --sysconfdir=/etc
+  - make
+  - sudo make install
 install:
   - go get golang.org/x/tools/cmd/cover
 script:
