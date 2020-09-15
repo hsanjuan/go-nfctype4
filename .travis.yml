@@ -2,7 +2,7 @@ language: go
 dist: focal
 sudo: required
 env:
-  LIBNFC_VERSION: 1.8.0
+  - LIBNFC_VERSION=1.8.0
 go:
   - go1.15.x
 before_install:
@@ -14,7 +14,8 @@ before_install:
   - ./configure --prefix=/usr --sysconfdir=/etc
   - make
   - sudo make install
-  - cd .. && rm -rf libnfc-${LIBNFC_VERSION}*
+  - cd ..
+  - rm -rf libnfc-${LIBNFC_VERSION}*
 install:
   - go get golang.org/x/tools/cmd/cover
 script:
