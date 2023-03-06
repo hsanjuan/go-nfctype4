@@ -283,11 +283,27 @@ func (dev *Device) ndefDetectProcedure() (*tagState, error) {
 		return nil, err
 	}
 
-	// Read Capability Container and parse it. It should have 15 bytes.
+	// Read Capability Container start. It should have at least 15 bytes.
 	ccBytes, err := dev.commander.ReadBinary(0, 15)
 	if err != nil {
 		return nil, err
 	}
+	if len(ccBytes) < 15 {
+		return nil, errors.New(
+			"invalid Capability Container: should be 15 bytes")
+	}
+
+	// Read the remainder of the Capability Container based on CCLEN.
+	ccLen := helpers.BytesToUint16([2]byte{ccBytes[0], ccBytes[1]})
+	if ccLen > 15 {
+		ccBytesExtra, err := dev.commander.ReadBinary(15, ccLen-15)
+		if err != nil {
+			return nil, err
+		}
+		ccBytes = append(ccBytes, ccBytesExtra...)
+	}
+
+	// Parse the Capability Container
 	cc := new(capabilitycontainer.CapabilityContainer)
 	if _, err := cc.Unmarshal(ccBytes); err != nil {
 		return nil, err
