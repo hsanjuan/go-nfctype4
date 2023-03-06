@@ -1,6 +1,4 @@
-github.com/fuzxxl/nfc/v2 v2.1.3 h1:o9AEgWNshQPegC/mUV1HmzyBn9c937q5BCoc6Sa/gOc=
-github.com/fuzxxl/nfc/v2 v2.1.3/go.mod h1:I11FBJg/xqZnMu029uRebpKgaEx0N5Oe8AH+3L8e6Sk=
-github.com/hsanjuan/go-ndef v0.0.0-20200427083122-ed2ec78872c2 h1:vD5XRdtY0L0VIC8OnKl0cUOxAqmqZAJBWtpPCzhPNII=
-github.com/hsanjuan/go-ndef v0.0.0-20200427083122-ed2ec78872c2/go.mod h1:wOExypaXLIhVmuGz5DvyEaHdMRcp5bQkgj6yiHlsMj0=
+github.com/clausecker/nfc/v2 v2.1.4 h1:zw2Cnny7pxPnuxVMBo+DXqXYETzUN7pMhNEA61yT5gY=
+github.com/clausecker/nfc/v2 v2.1.4/go.mod h1:BjRBQUQTQmiwh2tEfQ+xBM5xY05sV2gnZ0JRYEHog/o=
 github.com/hsanjuan/go-ndef v0.0.1 h1:un1E9jEVa0t8j33qT2JFfseOAI3MikbrkmMEn9Lx0Wk=
 github.com/hsanjuan/go-ndef v0.0.1/go.mod h1:LqYM55xXg5wubrxucAxkuK8nW+wjFCCZNyfsd9lPR+Q=

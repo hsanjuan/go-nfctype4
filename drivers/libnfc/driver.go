@@ -25,7 +25,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/fuzxxl/nfc/v2"
+	"github.com/clausecker/nfc/v2"
 )
 
 // Common errors
